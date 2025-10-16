@@ -5,22 +5,22 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import {
   AppBarProps,
   AppSetting,
   FoxgloveWebSocketDataSourceFactory,
   IDataSourceFactory,
-  IdbExtensionLoader,
-  McapLocalDataSourceFactory,
-  RemoteDataSourceFactory,
-  Ros1LocalBagDataSourceFactory,
-  Ros2LocalBagDataSourceFactory,
+  // IdbExtensionLoader,
+  // McapLocalDataSourceFactory,
+  // RemoteDataSourceFactory,
+  // Ros1LocalBagDataSourceFactory,
+  // Ros2LocalBagDataSourceFactory,
   RosbridgeDataSourceFactory,
-  SampleNuscenesDataSourceFactory,
+  // SampleNuscenesDataSourceFactory,
   SharedRoot,
-  UlogLocalDataSourceFactory,
+  // UlogLocalDataSourceFactory,
 } from "@lichtblick/suite-base";
 
 import LocalStorageAppConfiguration from "./services/LocalStorageAppConfiguration";
@@ -44,21 +44,21 @@ export function WebRoot(props: {
     [],
   );
 
-  const [extensionLoaders] = useState(() => [
-    new IdbExtensionLoader("org"),
-    new IdbExtensionLoader("local"),
-  ]);
+  // const [extensionLoaders] = useState(() => [
+  //   new IdbExtensionLoader("org"),
+  //   new IdbExtensionLoader("local"),
+  // ]);
 
   const dataSources = useMemo(() => {
     const sources = [
-      new Ros1LocalBagDataSourceFactory(),
-      new Ros2LocalBagDataSourceFactory(),
+      // new Ros1LocalBagDataSourceFactory(),
+      // new Ros2LocalBagDataSourceFactory(),
       new FoxgloveWebSocketDataSourceFactory(),
       new RosbridgeDataSourceFactory(),
-      new UlogLocalDataSourceFactory(),
-      new SampleNuscenesDataSourceFactory(),
-      new McapLocalDataSourceFactory(),
-      new RemoteDataSourceFactory(),
+      // new UlogLocalDataSourceFactory(),
+      // new SampleNuscenesDataSourceFactory(),
+      // new McapLocalDataSourceFactory(),
+      // new RemoteDataSourceFactory(),
     ];
 
     return props.dataSources ?? sources;
@@ -70,7 +70,7 @@ export function WebRoot(props: {
       deepLinks={[window.location.href]}
       dataSources={dataSources}
       appConfiguration={appConfiguration}
-      extensionLoaders={extensionLoaders}
+      extensionLoaders={[]}
       enableGlobalCss
       extraProviders={props.extraProviders}
       AppBarComponent={props.AppBarComponent}

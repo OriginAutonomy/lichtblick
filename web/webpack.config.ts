@@ -11,7 +11,7 @@ import {
   ConfigParams,
   devServerConfig,
   mainConfig,
-} from "@lichtblick/suite-web/src/webpackConfigs";
+} from "../packages/suite-web/src/webpackConfigs";
 
 import packageJson from "../package.json";
 

@@ -5,12 +5,12 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { MeshoptDecoder } from "meshoptimizer";
+// import { MeshoptDecoder } from "meshoptimizer"; // Commented out - WASM module
 import * as THREE from "three";
-import dracoDecoderWasmUrl from "three/examples/jsm/libs/draco/draco_decoder.wasm";
-import dracoWasmWrapperJs from "three/examples/jsm/libs/draco/draco_wasm_wrapper.js?raw";
+// import dracoDecoderWasmUrl from "three/examples/jsm/libs/draco/draco_decoder.wasm"; // Commented out - WASM module
+// import dracoWasmWrapperJs from "three/examples/jsm/libs/draco/draco_wasm_wrapper.js?raw"; // Commented out - WASM module
 import { ColladaLoader } from "three/examples/jsm/loaders/ColladaLoader";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader"; // Commented out - WASM module
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
@@ -54,7 +54,7 @@ export class ModelCache {
   #edgeMaterial: THREE.Material;
   #fetchAsset: BuiltinPanelExtensionContext["unstable_fetchAsset"];
   #colladaTextureObjectUrls = new Map<string, string>();
-  #dracoLoader?: DRACOLoader;
+  // #dracoLoader?: DRACOLoader; // Commented out - WASM module
 
   public constructor(public readonly options: ModelCacheOptions) {
     this.#edgeMaterial = options.edgeMaterial;
@@ -154,8 +154,8 @@ export class ModelCache {
     const manager = new THREE.LoadingManager(undefined, undefined, onError);
     manager.setURLModifier(rewriteUrl);
     const gltfLoader = new GLTFLoader(manager);
-    gltfLoader.setMeshoptDecoder(MeshoptDecoder);
-    gltfLoader.setDRACOLoader(this.#getDracoLoader(manager));
+    // gltfLoader.setMeshoptDecoder(MeshoptDecoder); // Commented out - WASM module
+    // gltfLoader.setDRACOLoader(this.#getDracoLoader(manager)); // Commented out - WASM module
 
     manager.itemStart(url);
     const gltf = await gltfLoader.parseAsync(buffer, "");
@@ -288,39 +288,39 @@ export class ModelCache {
     return fixObjMaterials(group);
   }
 
-  // singleton dracoloader
-  #getDracoLoader(manager: THREE.LoadingManager): DRACOLoader {
-    let dracoLoader = this.#dracoLoader;
-    if (!dracoLoader) {
-      dracoLoader = new DRACOLoader(manager);
-      // Hack in a replacement function to load assets from the webpack bundle
-      (dracoLoader as { _loadLibrary?: (url: string, responseType: string) => unknown })[
-        "_loadLibrary"
-      ] = async function (url: string, responseType: string) {
-        if (url === "draco_wasm_wrapper.js" && responseType === "text") {
-          return dracoWasmWrapperJs;
-        } else if (url === "draco_decoder.wasm" && responseType === "arraybuffer") {
-          return await (await fetch(dracoDecoderWasmUrl)).arrayBuffer();
-        } else {
-          throw new Error(
-            `DRACOLoader attempt to load non-bundled asset: ${url} as ${responseType}`,
-          );
-        }
-      };
-      this.#dracoLoader = dracoLoader;
-    }
+  // singleton dracoloader - commented out because it uses WASM modules
+  // #getDracoLoader(manager: THREE.LoadingManager): DRACOLoader {
+  //   let dracoLoader = this.#dracoLoader;
+  //   if (!dracoLoader) {
+  //     dracoLoader = new DRACOLoader(manager);
+  //     // Hack in a replacement function to load assets from the webpack bundle
+  //     (dracoLoader as { _loadLibrary?: (url: string, responseType: string) => unknown })[
+  //       "_loadLibrary"
+  //     ] = async function (url: string, responseType: string) {
+  //       if (url === "draco_wasm_wrapper.js" && responseType === "text") {
+  //         return dracoWasmWrapperJs;
+  //       } else if (url === "draco_decoder.wasm" && responseType === "arraybuffer") {
+  //         return await (await fetch(dracoDecoderWasmUrl)).arrayBuffer();
+  //       } else {
+  //         throw new Error(
+  //           `DRACOLoader attempt to load non-bundled asset: ${url} as ${responseType}`,
+  //         );
+  //       }
+  //     };
+  //     this.#dracoLoader = dracoLoader;
+  //   }
 
-    dracoLoader.manager = manager;
-    return dracoLoader;
-  }
+  //   dracoLoader.manager = manager;
+  //   return dracoLoader;
+  // }
 
   public dispose(): void {
     this.#colladaTextureObjectUrls.forEach((_key, objectUrl) => {
       URL.revokeObjectURL(objectUrl);
     });
     // DRACOLoader is only loader that needs to be disposed because it uses a webworker
-    this.#dracoLoader?.dispose();
-    this.#dracoLoader = undefined;
+    // this.#dracoLoader?.dispose(); // Commented out - WASM module
+    // this.#dracoLoader = undefined; // Commented out - WASM module
   }
 }
 
