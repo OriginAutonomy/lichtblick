@@ -216,11 +216,23 @@
           "colorMode": "colormap",
           "colorMap": "turbo"
         },
+        "/genz/trajectory": {
+          "visible": true,
+          "lineWidth": 0.01,
+          "gradient": [
+            "#000000ff",
+            "rgba(124, 107, 255, 0.5)"
+          ]
+        },
         "/local_costmap/published_footprint": {
-          "visible": false
+          "visible": true,
+          "lineWidth": 0.01,
+          "color": "#000000ff"
         },
         "/global_costmap/published_footprint": {
-          "visible": false
+          "visible": true,
+          "color": "#000000ff",
+          "lineWidth": 0.01
         },
         "/projected_map": {
           "visible": true
@@ -249,9 +261,9 @@
           "visible": false
         },
         "/local_costmap/costmap": {
-          "visible": false,
-          "maxColor": "#00000036",
-          "minColor": "#ffffff2b"
+          "visible": true,
+          "color": "#000000ff",
+          "lineWidth": 0.01
         },
         "/local_plan": {
           "visible": true,
