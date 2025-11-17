@@ -207,6 +207,115 @@ export default function PlayerManager(
             const handles = args.handles;
             const files = args.files;
 
+            // Special handling for YAML files (ROS2 bag metadata)
+            if (foundSource.id === "rosbag-yaml-file") {
+              // Handle YAML file loading asynchronously
+              (async () => {
+                try {
+                  // First, collect all files from both files array and handles
+                  const allFiles: File[] = [];
+                  if (files) {
+                    allFiles.push(...files);
+                  }
+                  if (handles) {
+                    const filesFromHandles = await Promise.all(
+                      handles.map(async (handle) => await handle.getFile()),
+                    );
+                    allFiles.push(...filesFromHandles);
+                  }
+
+                  // Find YAML file
+                  const yamlFile = allFiles.find((f) => f.name.endsWith(".yaml"));
+                  const yamlHandle = handles?.find((h) => h.name.endsWith(".yaml"));
+
+                  if (!yamlFile) {
+                    enqueueSnackbar("No YAML file found", { variant: "error" });
+                    return;
+                  }
+
+                  const { parseRosbagYaml } = await import(
+                    "@lichtblick/suite-base/util/parseRosbagYaml"
+                  );
+                  const yamlContent = await yamlFile.text();
+                  const metadata = await parseRosbagYaml(yamlContent);
+
+                  // Get zstd files from provided files/handles first
+                  const zstdFiles: File[] = allFiles.filter(
+                    (f) => f.name.endsWith(".mcap.zstd") || f.name.endsWith(".zstd"),
+                  );
+
+                  // Try to get files from the same directory as the YAML file
+                  const handleToUse = yamlHandle ?? handles?.find((h) => h.name.endsWith(".yaml"));
+                  if (handleToUse && "getParent" in handleToUse && typeof handleToUse.getParent === "function") {
+                    try {
+                      const parentHandle = await handleToUse.getParent();
+                      if (parentHandle) {
+                        log.debug("Accessing parent directory to discover zstd files");
+                        for await (const [name, handle] of parentHandle.entries()) {
+                          if (
+                            handle.kind === "file" &&
+                            (name.endsWith(".mcap.zstd") || name.endsWith(".zstd"))
+                          ) {
+                            // Only add if not already in zstdFiles and matches expected name
+                            if (
+                              metadata.relativeFilePaths.includes(name) &&
+                              !zstdFiles.some((f) => f.name === name)
+                            ) {
+                              const zstdFile = await (handle as FileSystemFileHandle).getFile();
+                              zstdFiles.push(zstdFile);
+                              log.debug(`Found zstd file: ${name}`);
+                            }
+                          }
+                        }
+                        log.debug(`Found ${zstdFiles.length} zstd files from directory`);
+                      } else {
+                        log.warn("getParent() returned null/undefined");
+                      }
+                    } catch (error) {
+                      log.warn("Could not access directory for YAML file", error);
+                      // Continue with files we already have
+                    }
+                  } else {
+                    log.debug("getParent() not available on file handle");
+                  }
+
+                  // Sort files by order in relative_file_paths
+                  const sortedFiles = metadata.relativeFilePaths
+                    .map((relativePath) => zstdFiles.find((f) => f.name === relativePath))
+                    .filter((f): f is File => f !== undefined);
+
+                  if (sortedFiles.length === 0) {
+                    const foundFileNames = zstdFiles.map((f) => f.name).join(", ");
+                    const expectedFileNames = metadata.relativeFilePaths.join(", ");
+                    const missingCount = metadata.relativeFilePaths.length;
+                    throw new Error(
+                      `No zstd files found. Found: ${foundFileNames || "none"}. Expected ${missingCount} files: ${expectedFileNames}. ` +
+                        `Please select all ${missingCount} zstd files along with the YAML file when opening, or ensure the files are in the same directory.`,
+                    );
+                  }
+
+                  // Store metadata temporarily for file boundaries
+                  const { setPendingMetadata } = await import(
+                    "@lichtblick/suite-base/dataSources/RosbagYamlDataSourceFactory"
+                  );
+                  const tempKey = sortedFiles.map((f) => f.name).join("|");
+                  setPendingMetadata(tempKey, { files: metadata.files });
+
+                  const newPlayer = foundSource.initialize({
+                    files: sortedFiles,
+                    metricsCollector,
+                  });
+
+                  if (newPlayer && isMounted()) {
+                    setBasePlayer(newPlayer);
+                  }
+                } catch (error) {
+                  enqueueSnackbar((error as Error).message, { variant: "error" });
+                }
+              })();
+              return;
+            }
+
             // files we can try loading immediately
             // We do not add these to recents entries because putting File in indexedb results in
             // the entire file being stored in the database.

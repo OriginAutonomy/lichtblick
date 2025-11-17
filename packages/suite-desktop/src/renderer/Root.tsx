@@ -20,6 +20,7 @@ import {
   Ros1LocalBagDataSourceFactory,
   Ros1SocketDataSourceFactory,
   Ros2LocalBagDataSourceFactory,
+  RosbagYamlDataSourceFactory,
   RosbridgeDataSourceFactory,
   SampleNuscenesDataSourceFactory,
   UlogLocalDataSourceFactory,
@@ -96,6 +97,7 @@ export default function Root(props: RootProps): React.JSX.Element {
       new VelodyneDataSourceFactory(),
       new SampleNuscenesDataSourceFactory(),
       new McapLocalDataSourceFactory(),
+      new RosbagYamlDataSourceFactory(),
       new RemoteDataSourceFactory(),
     ];
 

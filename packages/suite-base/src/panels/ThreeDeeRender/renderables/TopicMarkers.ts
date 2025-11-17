@@ -131,7 +131,11 @@ export class TopicMarkers extends Renderable<MarkerTopicUserData> {
         }
 
         const frameId = this.renderer.normalizeFrameId(marker.header.frame_id);
-        const srcTime = marker.frame_locked ? currentTime : renderable.userData.messageTime;
+        let srcTime = marker.frame_locked ? currentTime : renderable.userData.messageTime;
+        // If marker timestamp is zero, use current time to get latest transform
+        if (!marker.frame_locked && srcTime === 0n) {
+          srcTime = currentTime;
+        }
         const updated = updatePose(
           renderable,
           this.renderer.transformTree,

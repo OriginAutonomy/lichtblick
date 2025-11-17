@@ -91,8 +91,8 @@ export function useOpenFile(sources: readonly IDataSourceFactory[]): () => Promi
     /**
      * Should be removed when implement the rest of extensions.
      */
-    if (extension !== ".mcap" && processedFiles.length > 1) {
-      throwErrorAndSnackbar(`The application only support multiple files for MCAP extension.`);
+    if (extension !== ".mcap" && extension !== ".yaml" && processedFiles.length > 1) {
+      throwErrorAndSnackbar(`The application only support multiple files for MCAP and YAML extensions.`);
     }
     selectSource(matchingSources[0]!.id, {
       type: "file",

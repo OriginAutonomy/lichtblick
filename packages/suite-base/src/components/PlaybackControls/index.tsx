@@ -41,6 +41,7 @@ import {
   MessagePipelineContext,
   useMessagePipeline,
 } from "@lichtblick/suite-base/components/MessagePipeline";
+import { getFileBoundaries } from "@lichtblick/suite-base/dataSources/RosbagYamlDataSourceFactory";
 import SyncInstanceToggle from "@lichtblick/suite-base/components/PlaybackControls/SwitchSyncInstances/SyncInstanceToggle";
 import { useStyles } from "@lichtblick/suite-base/components/PlaybackControls/index.style";
 import { useDirectionalSeek } from "@lichtblick/suite-base/components/PlaybackControls/useDirectionalSeek";
@@ -61,6 +62,7 @@ import { RepeatAdapter } from "./RepeatAdapter";
 import Scrubber from "./Scrubber";
 
 const selectPresence = (ctx: MessagePipelineContext) => ctx.playerState.presence;
+const selectPlayerId = (ctx: MessagePipelineContext) => ctx.playerState.playerId;
 const selectEventsSupported = (store: EventsStore) => store.eventsSupported;
 const selectPlaybackRepeat = (store: WorkspaceContextStore) => store.playbackControls.repeat;
 
@@ -82,12 +84,68 @@ export default function PlaybackControls({
   getTimeInfo,
 }: PlaybackControlsProps): React.JSX.Element {
   const presence = useMessagePipeline(selectPresence);
+  const playerId = useMessagePipeline(selectPlayerId);
 
   const { classes, cx } = useStyles();
   const repeat = useWorkspaceStore(selectPlaybackRepeat);
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false);
   const { currentUserType } = useCurrentUser();
   const eventsSupported = useEvents(selectEventsSupported);
+
+  // Get file boundaries for navigation
+  const fileBoundaries = useMemo(() => {
+    if (!playerId) {
+      return [];
+    }
+    return getFileBoundaries(playerId);
+  }, [playerId]);
+
+  // Get current file index
+  const currentFileIndex = useMemo(() => {
+    if (fileBoundaries.length === 0) {
+      return -1;
+    }
+    const { currentTime } = getTimeInfo();
+    if (!currentTime) {
+      return -1;
+    }
+    for (let i = 0; i < fileBoundaries.length; i++) {
+      const boundary = fileBoundaries[i];
+      if (!boundary) {
+        continue;
+      }
+      if (
+        compare(currentTime, boundary.startTime) >= 0 &&
+        compare(currentTime, boundary.endTime) <= 0
+      ) {
+        return i;
+      }
+    }
+    return -1;
+  }, [fileBoundaries, getTimeInfo]);
+
+  // Navigation functions
+  const navigateToNextFile = useCallback(() => {
+    if (currentFileIndex >= 0 && currentFileIndex < fileBoundaries.length - 1) {
+      const nextBoundary = fileBoundaries[currentFileIndex + 1];
+      if (nextBoundary) {
+        seek(nextBoundary.startTime);
+      }
+    }
+  }, [currentFileIndex, fileBoundaries, seek]);
+
+  const navigateToPreviousFile = useCallback(() => {
+    if (currentFileIndex > 0) {
+      const prevBoundary = fileBoundaries[currentFileIndex - 1];
+      if (prevBoundary) {
+        seek(prevBoundary.startTime);
+      }
+    }
+  }, [currentFileIndex, fileBoundaries, seek]);
+
+  const hasFileNavigation = fileBoundaries.length > 0;
+  const canGoNext = currentFileIndex >= 0 && currentFileIndex < fileBoundaries.length - 1;
+  const canGoPrevious = currentFileIndex > 0;
 
   const {
     playbackControlActions: { setRepeat },
@@ -192,6 +250,16 @@ export default function PlaybackControls({
             <PlaybackTimeDisplay onSeek={seek} onPause={pause} />
           </Stack>
           <Stack direction="row" alignItems="center" gap={1}>
+            {hasFileNavigation && (
+              <HoverableIconButton
+                disabled={disableControls || !canGoPrevious}
+                size="small"
+                title={`Previous file (${currentFileIndex > 0 ? currentFileIndex : "N/A"}/${fileBoundaries.length})`}
+                icon={<Previous20Regular />}
+                activeIcon={<Previous20Filled />}
+                onClick={navigateToPreviousFile}
+              />
+            )}
             <HoverableIconButton
               disabled={disableControls}
               size="small"
@@ -221,6 +289,16 @@ export default function PlaybackControls({
                 seekForwardAction();
               }}
             />
+            {hasFileNavigation && (
+              <HoverableIconButton
+                disabled={disableControls || !canGoNext}
+                size="small"
+                title={`Next file (${currentFileIndex >= 0 ? currentFileIndex + 2 : "N/A"}/${fileBoundaries.length})`}
+                icon={<Next20Regular />}
+                activeIcon={<Next20Filled />}
+                onClick={navigateToNextFile}
+              />
+            )}
           </Stack>
           <Stack direction="row" flex={1} alignItems="center" justifyContent="flex-end" gap={0.5}>
             <SyncInstanceToggle />

@@ -17,6 +17,7 @@ import {
   RemoteDataSourceFactory,
   Ros1LocalBagDataSourceFactory,
   Ros2LocalBagDataSourceFactory,
+  RosbagYamlDataSourceFactory,
   RosbridgeDataSourceFactory,
   SampleNuscenesDataSourceFactory,
   SharedRoot,
@@ -58,6 +59,7 @@ export function WebRoot(props: {
       new UlogLocalDataSourceFactory(),
       new SampleNuscenesDataSourceFactory(),
       new McapLocalDataSourceFactory(),
+      new RosbagYamlDataSourceFactory(),
       new RemoteDataSourceFactory(),
     ];
 
