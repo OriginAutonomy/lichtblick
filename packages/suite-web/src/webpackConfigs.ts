@@ -134,6 +134,9 @@ export const mainConfig =
       entry: params.entrypoint,
       devtool: isDev ? "eval-cheap-module-source-map" : params.prodSourceMap,
 
+      // Limit parallelism to single core for production builds to reduce CPU usage
+      parallelism: isDev ? undefined : 1,
+
       experiments: {
         lazyCompilation: isServe ? true : false,
       },

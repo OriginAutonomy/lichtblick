@@ -264,20 +264,24 @@ export function makeConfig(
       //   // downstream users of the suite-base package.
       //   filename: "[name].worker.[contenthash].js",
       // }),
-      new ForkTsCheckerWebpackPlugin({
-        typescript: {
-          configFile: tsconfigPath,
-          configOverwrite: {
-            compilerOptions: {
-              noUnusedLocals: !allowUnusedVariables,
-              noUnusedParameters: !allowUnusedVariables,
-              jsx: isDev ? "react-jsxdev" : "react-jsx",
-            },
-          },
-          // Limit memory usage for production builds to reduce CPU/resource usage
-          memoryLimit: isDev ? undefined : 512,
-        },
-      }),
+      // Disable ForkTsCheckerWebpackPlugin in production builds to reduce CPU usage
+      // Type checking is less critical during production builds
+      ...(isDev
+        ? [
+            new ForkTsCheckerWebpackPlugin({
+              typescript: {
+                configFile: tsconfigPath,
+                configOverwrite: {
+                  compilerOptions: {
+                    noUnusedLocals: !allowUnusedVariables,
+                    noUnusedParameters: !allowUnusedVariables,
+                    jsx: isDev ? "react-jsxdev" : "react-jsx",
+                  },
+                },
+              },
+            }),
+          ]
+        : []),
     ],
     node: {
       __dirname: true,
