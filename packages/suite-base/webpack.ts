@@ -274,6 +274,8 @@ export function makeConfig(
               jsx: isDev ? "react-jsxdev" : "react-jsx",
             },
           },
+          // Limit memory usage for production builds to reduce CPU/resource usage
+          memoryLimit: isDev ? undefined : 512,
         },
       }),
     ],
