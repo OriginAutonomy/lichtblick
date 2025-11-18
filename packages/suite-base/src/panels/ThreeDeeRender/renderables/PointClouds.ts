@@ -851,7 +851,11 @@ export class PointClouds extends SceneExtension<PointCloudHistoryRenderable> {
     const { topic, schemaName } = messageEvent;
     const pointCloud = normalizePointCloud(messageEvent.message);
     const receiveTime = toNanoSec(messageEvent.receiveTime);
-    const messageTime = toNanoSec(pointCloud.timestamp);
+    // Use receiveTime if timestamp is exactly 0 (both sec and nsec are 0)
+    const timestamp = pointCloud.timestamp;
+    const useReceiveTime =
+      timestamp.sec === 0 && timestamp.nsec === 0;
+    const messageTime = useReceiveTime ? receiveTime : toNanoSec(timestamp);
     const frameId = pointCloud.frame_id;
 
     this.#handlePointCloud(
@@ -869,7 +873,11 @@ export class PointClouds extends SceneExtension<PointCloudHistoryRenderable> {
     const { topic, schemaName } = messageEvent;
     const pointCloud = normalizePointCloud2(messageEvent.message);
     const receiveTime = toNanoSec(messageEvent.receiveTime);
-    const messageTime = toNanoSec(pointCloud.header.stamp);
+    // Use receiveTime if timestamp is exactly 0 (both sec and nsec are 0)
+    const stamp = pointCloud.header.stamp;
+    const useReceiveTime =
+      stamp.sec === 0 && stamp.nsec === 0;
+    const messageTime = useReceiveTime ? receiveTime : toNanoSec(stamp);
     const frameId = pointCloud.header.frame_id;
 
     this.#handlePointCloud(

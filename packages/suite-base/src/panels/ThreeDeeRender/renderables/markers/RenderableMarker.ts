@@ -40,10 +40,15 @@ export class RenderableMarker extends Renderable<MarkerUserData> {
   ) {
     const name = getMarkerId(topic, marker.ns, marker.id);
     const hasLifetime = marker.lifetime.sec !== 0 || marker.lifetime.nsec !== 0;
+    // Use receiveTime if timestamp is exactly 0 (both sec and nsec are 0)
+    const stamp = marker.header.stamp;
+    const useReceiveTime =
+      stamp.sec === 0 && stamp.nsec === 0 && receiveTime != undefined;
+    const messageTime = useReceiveTime ? receiveTime : toNanoSec(stamp);
 
     super(name, renderer, {
       receiveTime: receiveTime ?? 0n,
-      messageTime: toNanoSec(marker.header.stamp),
+      messageTime,
       frameId: renderer.normalizeFrameId(marker.header.frame_id),
       pose: marker.pose,
       settingsPath: ["topics", topic],
@@ -78,7 +83,11 @@ export class RenderableMarker extends Renderable<MarkerUserData> {
     if (receiveTime != undefined) {
       this.userData.receiveTime = receiveTime;
     }
-    this.userData.messageTime = toNanoSec(marker.header.stamp);
+    // Use receiveTime if timestamp is exactly 0 (both sec and nsec are 0)
+    const stamp = marker.header.stamp;
+    const useReceiveTime =
+      stamp.sec === 0 && stamp.nsec === 0 && receiveTime != undefined;
+    this.userData.messageTime = useReceiveTime ? receiveTime : toNanoSec(stamp);
     this.userData.frameId = this.renderer.normalizeFrameId(marker.header.frame_id);
     this.userData.pose = marker.pose;
     this.userData.marker = this.#renderMarker(marker);
