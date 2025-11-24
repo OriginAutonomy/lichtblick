@@ -23,6 +23,7 @@ import {
   UlogLocalDataSourceFactory,
 } from "@lichtblick/suite-base";
 
+import { extractAllLayoutTopics } from "./layouts";
 import LocalStorageAppConfiguration from "./services/LocalStorageAppConfiguration";
 
 const isDevelopment = process.env.NODE_ENV === "development";

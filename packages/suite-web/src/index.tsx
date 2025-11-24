@@ -78,10 +78,12 @@ export async function main(getParams: () => Promise<MainParams> = async () => ({
   await initI18n();
 
   const { WebRoot } = await import("./WebRoot");
+  const { extractAllLayoutTopics } = await import("./layouts");
   const params = await getParams();
+  const layoutTopics = extractAllLayoutTopics();
   const rootElement = params.rootElement ?? (
     <WebRoot extraProviders={params.extraProviders} dataSources={params.dataSources}>
-      <StudioApp />
+      <StudioApp backgroundLayoutTopics={layoutTopics} />
     </WebRoot>
   );
 

@@ -25,6 +25,7 @@ import TimelineInteractionStateProvider from "@lichtblick/suite-base/providers/T
 import UserProfileLocalStorageProvider from "@lichtblick/suite-base/providers/UserProfileLocalStorageProvider";
 
 import Workspace from "./Workspace";
+import { BackgroundLayoutSubscriptions } from "./components/BackgroundLayoutSubscriptions";
 import DocumentTitleAdapter from "./components/DocumentTitleAdapter";
 import MultiProvider from "./components/MultiProvider";
 import PlayerManager from "./components/PlayerManager";
@@ -47,7 +48,12 @@ function contextMenuHandler(event: MouseEvent) {
   return false;
 }
 
-export function StudioApp(): React.JSX.Element {
+export type StudioAppProps = {
+  /** Optional set of topic names to subscribe to in the background from layout files */
+  backgroundLayoutTopics?: ReadonlySet<string>;
+};
+
+export function StudioApp(props?: StudioAppProps): React.JSX.Element {
   const {
     dataSources,
     extensionLoaders,
@@ -61,6 +67,8 @@ export function StudioApp(): React.JSX.Element {
     onAppBarDoubleClick,
     AppBarComponent,
   } = useSharedRootContext();
+
+  const backgroundLayoutTopics = props?.backgroundLayoutTopics;
 
   const providers = [
     /* eslint-disable react/jsx-key */
@@ -129,6 +137,9 @@ export function StudioApp(): React.JSX.Element {
         <DndProvider backend={HTML5Backend}>
           <Suspense fallback={<></>}>
             <PanelCatalogProvider>
+              {backgroundLayoutTopics && (
+                <BackgroundLayoutSubscriptions layoutTopics={backgroundLayoutTopics} />
+              )}
               <Workspace
                 deepLinks={deepLinks}
                 appBarLeftInset={appBarLeftInset}
