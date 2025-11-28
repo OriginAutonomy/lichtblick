@@ -13,8 +13,9 @@ import {
   PanelRight24Regular,
   SlideAdd24Regular,
 } from "@fluentui/react-icons";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { Avatar, IconButton, Tooltip } from "@mui/material";
-import { useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import tc from "tinycolor2";
 import { makeStyles } from "tss-react/mui";
@@ -28,12 +29,14 @@ import {
   LayoutState,
   useCurrentLayoutSelector,
 } from "@lichtblick/suite-base/context/CurrentLayoutContext";
+import NativeWindowContext from "@lichtblick/suite-base/context/NativeWindowContext";
 import {
   WorkspaceContextStore,
   useWorkspaceStore,
 } from "@lichtblick/suite-base/context/Workspace/WorkspaceContext";
 import { useWorkspaceActions } from "@lichtblick/suite-base/context/Workspace/useWorkspaceActions";
 import { useAppConfigurationValue } from "@lichtblick/suite-base/hooks";
+import isDesktopApp from "@lichtblick/suite-base/util/isDesktopApp";
 
 import { AddPanelMenu } from "./AddPanelMenu";
 import { AppBarContainer } from "./AppBarContainer";
@@ -197,6 +200,19 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
   const userMenuOpen = Boolean(userAnchorEl);
   const panelMenuOpen = Boolean(panelAnchorEl);
 
+  const nativeWindow = useContext(NativeWindowContext);
+
+  const handleReload = useCallback(() => {
+    if (isDesktopApp()) {
+      // Desktop app: use native window reload
+      // Type assertion needed since INativeWindow interface doesn't include reload() in base package
+      (nativeWindow as { reload?: () => void })?.reload?.();
+    } else {
+      // Web: use browser reload
+      window.location.reload();
+    }
+  }, [nativeWindow]);
+
   return (
     <>
       <AppBarContainer onDoubleClick={onDoubleClick} leftInset={leftInset}>
@@ -259,6 +275,14 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
             <div className={classes.endInner}>
               {enableMemoryUseIndicator && <MemoryUseIndicator />}
               {appBarLayoutButton}
+              <AppBarIconButton
+                title={t("reloadClient")}
+                aria-label={t("reloadClient")}
+                onClick={handleReload}
+                data-testid="reload-button"
+              >
+                <RefreshIcon />
+              </AppBarIconButton>
               <Stack direction="row" alignItems="center" data-tourid="sidebar-button-group">
                 <AppBarIconButton
                   title={
