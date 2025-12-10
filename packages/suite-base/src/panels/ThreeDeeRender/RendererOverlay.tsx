@@ -26,6 +26,7 @@ import {
 import PublishGoalIcon from "@lichtblick/suite-base/components/PublishGoalIcon";
 import { usePanelMousePresence } from "@lichtblick/suite-base/hooks/usePanelMousePresence";
 import { HUD } from "@lichtblick/suite-base/panels/ThreeDeeRender/HUD";
+import { customTypography } from "@lichtblick/theme";
 
 import { InteractionContextMenu, Interactions, SelectionObject, TabType } from "./Interactions";
 import type { PickedRenderable } from "./Picker";
@@ -60,7 +61,7 @@ const useStyles = makeStyles()((theme) => ({
     alignItems: "center",
   },
   threeDeeButton: {
-    fontFamily: theme.typography.fontMonospace,
+    fontFamily: customTypography.fontMonospace,
     fontFeatureSettings: theme.typography.caption.fontFeatureSettings,
     fontSize: theme.typography.caption.fontSize,
     fontWeight: theme.typography.fontWeightBold,
@@ -74,7 +75,7 @@ const useStyles = makeStyles()((theme) => ({
     marginRight: theme.spacing(1),
   },
   kbd: {
-    fontFamily: theme.typography.fontMonospace,
+    fontFamily: customTypography.fontMonospace,
     background: tc(theme.palette.common.white).darken(45).toString(),
     padding: theme.spacing(0, 0.5),
     aspectRatio: 1,
@@ -207,6 +208,94 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     renderer?.setSelectedRenderable(selectedRenderable);
   }, [renderer, selectedRenderable]);
 
+  const publickClickButtonRef = useRef<HTMLButtonElement>(ReactNull);
+  const [publishMenuExpanded, setPublishMenuExpanded] = useState(false);
+  const selectedPublishClickIcon = PublishClickIcons[props.publishClickType];
+
+  const onLongPressPublish = useCallback(() => {
+    setPublishMenuExpanded(true);
+  }, []);
+  const longPressPublishEvent = useLongPress(onLongPressPublish);
+
+  const theme = useTheme();
+
+  // Publish control is only available if the canPublish prop is true and we have a fixed frame in the renderer
+  const showPublishControl =
+    props.interfaceMode === "3d" && props.canPublish && renderer?.fixedFrameId != undefined;
+  const publishControls = showPublishControl && (
+    <>
+      <Tooltip
+        placement="left"
+        title={props.publishActive ? "Click to cancel" : "Click to publish"}
+      >
+        <IconButton
+          {...longPressPublishEvent}
+          className={classes.iconButton}
+          size="small"
+          color={props.publishActive ? "info" : "inherit"}
+          ref={publickClickButtonRef}
+          onClick={props.onClickPublish}
+          data-testid="publish-button"
+        >
+          {selectedPublishClickIcon}
+          <div
+            style={{
+              borderBottom: "6px solid currentColor",
+              borderRight: "6px solid transparent",
+              bottom: 0,
+              left: 0,
+              height: 0,
+              width: 0,
+              margin: theme.spacing(0.25),
+              position: "absolute",
+            }}
+          />
+        </IconButton>
+      </Tooltip>
+      <Menu
+        id="publish-menu"
+        anchorEl={publickClickButtonRef.current}
+        anchorOrigin={{ vertical: "top", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        open={publishMenuExpanded}
+        onClose={() => {
+          setPublishMenuExpanded(false);
+        }}
+        slotProps={{ list: { dense: true } }}
+      >
+        <MenuItem
+          selected={props.publishClickType === "pose_estimate"}
+          onClick={() => {
+            props.onChangePublishClickType("pose_estimate");
+            setPublishMenuExpanded(false);
+          }}
+        >
+          <ListItemIcon>{PublishClickIcons.pose_estimate}</ListItemIcon>
+          <ListItemText disableTypography>Publish pose estimate</ListItemText>
+        </MenuItem>
+        <MenuItem
+          selected={props.publishClickType === "pose"}
+          onClick={() => {
+            props.onChangePublishClickType("pose");
+            setPublishMenuExpanded(false);
+          }}
+        >
+          <ListItemIcon>{PublishClickIcons.pose}</ListItemIcon>
+          <ListItemText disableTypography>Publish pose</ListItemText>
+        </MenuItem>
+        <MenuItem
+          selected={props.publishClickType === "point"}
+          onClick={() => {
+            props.onChangePublishClickType("point");
+            setPublishMenuExpanded(false);
+          }}
+        >
+          <ListItemIcon>{PublishClickIcons.point}</ListItemIcon>
+          <ListItemText disableTypography>Publish point</ListItemText>
+        </MenuItem>
+      </Menu>
+    </>
+  );
 
   const resetViewButton = showResetViewButton && (
     <Button

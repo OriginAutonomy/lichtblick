@@ -86,7 +86,7 @@ export class IndexDatasetsBuilder implements IDatasetsBuilder {
           mathFn && chartValue != undefined ? mathFn(chartValue) : undefined;
         return {
           x: idx,
-          y: chartValue == undefined ? NaN : mathModifiedValue ?? chartValue,
+          y: chartValue == undefined ? NaN : (mathModifiedValue ?? chartValue),
           receiveTime: msgEvent.receiveTime,
           value: mathModifiedValue ?? item,
         };
@@ -109,17 +109,15 @@ export class IndexDatasetsBuilder implements IDatasetsBuilder {
 
     for (const item of series) {
       let existingSeries = this.#seriesByKey.get(item.key);
-      if (!existingSeries) {
-        existingSeries = {
-          configIndex: item.configIndex,
-          enabled: item.enabled,
-          messagePath: item.messagePath,
-          parsed: item.parsed,
-          dataset: {
-            data: [],
-          },
-        };
-      }
+      existingSeries ??= {
+        configIndex: item.configIndex,
+        enabled: item.enabled,
+        messagePath: item.messagePath,
+        parsed: item.parsed,
+        dataset: {
+          data: [],
+        },
+      };
 
       existingSeries.configIndex = item.configIndex;
       existingSeries.enabled = item.enabled;

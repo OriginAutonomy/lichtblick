@@ -41,7 +41,7 @@ import { VisibilityToggle } from "./VisibilityToggle";
 import { icons } from "./icons";
 import { prepareSettingsNodes } from "./utils";
 
-function ExpansionArrow({ expanded }: { expanded: boolean }): React.JSX.Element {
+function ExpansionArrow({ expanded }: Readonly<{ expanded: boolean }>): React.JSX.Element {
   const { classes } = useStyles();
 
   const Component = expanded ? ArrowDownIcon : ArrowRightIcon;
@@ -85,7 +85,7 @@ type State = {
   visibilityFilter: SelectVisibilityFilterValue;
 };
 
-function NodeEditorComponent(props: NodeEditorProps): React.JSX.Element {
+function NodeEditorComponent(props: Readonly<NodeEditorProps>): React.JSX.Element {
   const { actionHandler, defaultOpen = true, filter, focusedPath, settings = {} } = props;
   const [state, setState] = useImmer<State>({
     editing: false,
@@ -322,21 +322,23 @@ function NodeEditorComponent(props: NodeEditorProps): React.JSX.Element {
               onFocus={(event) => {
                 event.target.select();
               }}
-              InputProps={{
-                endAdornment: (
-                  <IconButton
-                    className={classes.actionButton}
-                    title="Rename"
-                    data-node-function="edit-label"
-                    color="primary"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleEditing();
-                    }}
-                  >
-                    <CheckIcon fontSize="small" />
-                  </IconButton>
-                ),
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <IconButton
+                      className={classes.actionButton}
+                      title="Rename"
+                      data-node-function="edit-label"
+                      color="primary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleEditing();
+                      }}
+                    >
+                      <CheckIcon fontSize="small" />
+                    </IconButton>
+                  ),
+                },
               }}
             />
           ) : (

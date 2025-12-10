@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import dotenv from "dotenv";
-import { ESBuildMinifyPlugin } from "esbuild-loader";
+import { EsbuildPlugin } from "esbuild-loader";
 import ForkTsCheckerWebpackPlugin from "fork-ts-checker-webpack-plugin";
 // Monaco Editor disabled - UserScriptEditor panel is disabled
 // import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
@@ -45,7 +45,10 @@ export function makeConfig(
   _: unknown,
   argv: WebpackArgv,
   options: Options,
-): Pick<Configuration, "resolve" | "module" | "optimization" | "plugins" | "node"> {
+): Pick<
+  Configuration,
+  "resolve" | "module" | "optimization" | "plugins" | "node" | "ignoreWarnings"
+> {
   const isDev = argv.mode === "development";
   const isServe = argv.env?.WEBPACK_SERVE ?? false;
 
@@ -280,7 +283,7 @@ export function makeConfig(
       },
 
       minimizer: [
-        new ESBuildMinifyPlugin({
+        new EsbuildPlugin({
           target: "es2022",
           minify: true,
         }),
@@ -334,5 +337,11 @@ export function makeConfig(
       __dirname: true,
       __filename: true,
     },
+    ignoreWarnings: [
+      {
+        module: /node_modules\/typescript\/lib\/typescript\.js$/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+    ],
   };
 }

@@ -325,9 +325,7 @@ export default class UserScriptPlayer implements Player {
             if (outputMessage) {
               // https://github.com/typescript-eslint/typescript-eslint/issues/6632
               let messages = messagesByTopic[outTopic];
-              if (!messages) {
-                messages = [];
-              }
+              messages ??= [];
               messages.push(outputMessage);
               messagesByTopic[outTopic] = messages;
             }
@@ -355,6 +353,7 @@ export default class UserScriptPlayer implements Player {
 
   public setGlobalVariables(globalVariables: GlobalVariables): void {
     this.#globalVariables = globalVariables;
+    this.#player.setGlobalVariables(globalVariables);
   }
 
   // Called when userScript state is updated (i.e. scripts are saved)
