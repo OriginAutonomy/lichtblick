@@ -277,6 +277,13 @@ export class CoordinateFrame<ID extends AnyFrameId = UserFrameId> {
     outLower[1] = lteTf;
     outUpper[0] = gtTime;
     outUpper[1] = gtTf;
+    // #region agent log
+    const timeDelta = Number(gtTime - lteTime) / 1e9;
+    const requestTime = Number(time) / 1e9;
+    const lowerTime = Number(lteTime) / 1e9;
+    const upperTime = Number(gtTime) / 1e9;
+    fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:280',message:'findClosestTransforms interpolation',data:{frameId:this.id,requestTime,lowerTime,upperTime,timeDeltaSeconds:timeDelta,lowerPos:{x:lteTf.position()[0],y:lteTf.position()[1],z:lteTf.position()[2]},upperPos:{x:gtTf.position()[0],y:gtTf.position()[1],z:gtTf.position()[2]}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     return true;
   }
 
@@ -379,13 +386,30 @@ export class CoordinateFrame<ID extends AnyFrameId = UserFrameId> {
     maxDelta: Duration = MAX_DURATION,
   ): Pose | undefined {
     // perf-sensitive: function params instead of options object to avoid allocations
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:372',message:'CoordinateFrame.apply start',data:{thisFrameId:this.id,srcFrameId:srcFrame.id,rootFrameId:rootFrame.id,dstTime:dstTime.toString(),srcTime:srcTime.toString(),inputPos:{x:input.position.x,y:input.position.y,z:input.position.z}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
 
     // Transform from the source frame to the root frame
     if (rootFrame.applyLocal(out, input, srcFrame, srcTime, maxDelta) == undefined) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:384',message:'applyLocal to root failed',data:{thisFrameId:this.id,srcFrameId:srcFrame.id,rootFrameId:rootFrame.id,srcTime:srcTime.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       return undefined;
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:387',message:'after root transform',data:{thisFrameId:this.id,intermediatePos:{x:out.position.x,y:out.position.y,z:out.position.z}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Transform from the root frame to this frame
-    return this.applyLocal(out, out, rootFrame, dstTime, maxDelta);
+    const result = this.applyLocal(out, out, rootFrame, dstTime, maxDelta);
+    // #region agent log
+    if (result) {
+      fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:391',message:'apply complete',data:{thisFrameId:this.id,outputPos:{x:out.position.x,y:out.position.y,z:out.position.z}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:393',message:'applyLocal from root failed',data:{thisFrameId:this.id,rootFrameId:rootFrame.id,dstTime:dstTime.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
+    return result;
   }
 
   /**
@@ -477,9 +501,21 @@ export class CoordinateFrame<ID extends AnyFrameId = UserFrameId> {
     let curFrame = childFrame;
     while (curFrame !== parentFrame) {
       if (!curFrame.findClosestTransforms(tempLower, tempUpper, time, maxDelta)) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:479',message:'GetTransformMatrix findClosestTransforms failed',data:{parentFrameId:parentFrame.id,childFrameId:childFrame.id,curFrameId:curFrame.id,time:time.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         return false;
       }
+      // #region agent log
+      const beforeInterp = tempTransform.position();
+      // #endregion
       CoordinateFrame.InterpolateTransform(tempTransform, tempLower, tempUpper, time);
+      // #region agent log
+      const afterInterp = tempTransform.position();
+      if (Math.abs(afterInterp[0] - beforeInterp[0]) > 0.01 || Math.abs(afterInterp[1] - beforeInterp[1]) > 0.01 || Math.abs(afterInterp[2] - beforeInterp[2]) > 0.01) {
+        fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CoordinateFrame.ts:483',message:'GetTransformMatrix interpolation',data:{curFrameId:curFrame.id,time:time.toString(),beforeInterp:{x:beforeInterp[0],y:beforeInterp[1],z:beforeInterp[2]},afterInterp:{x:afterInterp[0],y:afterInterp[1],z:afterInterp[2]}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      }
+      // #endregion
 
       if (curFrame.offsetEulerDegrees) {
         const quaternion = tempTransform.rotation();

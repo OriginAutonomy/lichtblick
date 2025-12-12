@@ -12,6 +12,7 @@ import { SettingsTreeAction, SettingsTreeFields } from "@lichtblick/suite";
 
 import type { IRenderer } from "../IRenderer";
 import { DEFAULT_MESH_UP_AXIS } from "../ModelCache";
+import { DEFAULT_MAX_CAPACITY_PER_FRAME, MAX_DURATION } from "../transforms";
 import { SceneExtension } from "../SceneExtension";
 import { SettingsTreeEntry } from "../SettingsManager";
 
@@ -33,6 +34,27 @@ export class SceneSettings extends SceneExtension {
   public override settingsNodes(): SettingsTreeEntry[] {
     const config = this.renderer.config;
     const handler = this.handleSettingsAction;
+
+    // Get transform cache statistics
+    const cacheStats = this.renderer.transformTree.getCacheStats();
+    const maxCapacityPerFrame =
+      config.scene.transformCache?.maxCapacityPerFrame ?? DEFAULT_MAX_CAPACITY_PER_FRAME;
+    const maxStorageTimeNs =
+      config.scene.transformCache?.maxStorageTimeNs ?? MAX_DURATION;
+
+    // Calculate total max capacity (per frame * number of frames)
+    const totalMaxCapacity = maxCapacityPerFrame * cacheStats.frameCount;
+
+    // Format max storage time for display (convert nanoseconds to seconds)
+    const maxStorageTimeSec = Number(maxStorageTimeNs) / 1e9;
+    const maxStorageTimeDisplay =
+      maxStorageTimeNs === MAX_DURATION
+        ? "Unlimited"
+        : maxStorageTimeSec >= 3600
+          ? `${(maxStorageTimeSec / 3600).toFixed(1)} hours`
+          : maxStorageTimeSec >= 60
+            ? `${(maxStorageTimeSec / 60).toFixed(1)} minutes`
+            : `${maxStorageTimeSec.toFixed(1)} seconds`;
 
     const fields: SettingsTreeFields = {
       enableStats: {
@@ -86,6 +108,41 @@ export class SceneSettings extends SceneExtension {
             ? t("threeDee:takeEffectAfterReboot")
             : undefined,
       },
+      // Transform cache monitoring
+      transformCacheTotal: {
+        label: "Transform Cache: Total Transforms",
+        input: "string",
+        value: `${cacheStats.totalTransforms.toLocaleString()} / ${totalMaxCapacity.toLocaleString()} (${cacheStats.frameCount} frames)`,
+        readonly: true,
+        help: `Total number of transforms cached across all ${cacheStats.frameCount} frames. Maximum capacity: ${maxCapacityPerFrame.toLocaleString()} per frame.`,
+      },
+      transformCacheFramesAtCapacity: {
+        label: "Transform Cache: Frames at Capacity",
+        input: "string",
+        value: `${cacheStats.framesAtCapacity} / ${cacheStats.frameCount}`,
+        readonly: true,
+        help: `Number of frames that have reached their maximum capacity. Old transforms will be automatically evicted when capacity is reached.`,
+      },
+      transformCacheMaxCapacity: {
+        label: "Transform Cache: Max Capacity Per Frame",
+        input: "number",
+        value: maxCapacityPerFrame,
+        min: 100,
+        max: 100000,
+        step: 1000,
+        placeholder: String(DEFAULT_MAX_CAPACITY_PER_FRAME),
+        help: `Maximum number of transforms to cache per coordinate frame. Higher values use more memory but allow longer transform history. Default: ${DEFAULT_MAX_CAPACITY_PER_FRAME.toLocaleString()}`,
+      },
+      transformCacheMaxStorageTime: {
+        label: "Transform Cache: Max Storage Time (seconds)",
+        input: "number",
+        value: maxStorageTimeNs === MAX_DURATION ? undefined : Number(maxStorageTimeNs) / 1e9,
+        min: 1,
+        step: 1,
+        precision: 0,
+        placeholder: "Unlimited",
+        help: `Maximum time span to cache transforms. Transforms older than this will be evicted. Set to empty/unlimited for no time limit. Current: ${maxStorageTimeDisplay}`,
+      },
     };
 
     if (process.env.NODE_ENV === "production") {
@@ -127,6 +184,37 @@ export class SceneSettings extends SceneExtension {
         this.updateSettingsTree();
         return;
       }
+
+      // Handle transform cache settings
+      if (path[1] === "transformCacheMaxCapacity") {
+        const maxCapacity = value as number | undefined;
+        this.renderer.updateConfig((draft) => {
+          if (!draft.scene.transformCache) {
+            draft.scene.transformCache = {};
+          }
+          draft.scene.transformCache.maxCapacityPerFrame = maxCapacity;
+        });
+        this.updateSettingsTree();
+        return;
+      }
+
+      if (path[1] === "transformCacheMaxStorageTime") {
+        const maxStorageTimeSec = value as number | undefined;
+        this.renderer.updateConfig((draft) => {
+          if (!draft.scene.transformCache) {
+            draft.scene.transformCache = {};
+          }
+          if (maxStorageTimeSec != null && maxStorageTimeSec > 0) {
+            draft.scene.transformCache.maxStorageTimeNs = BigInt(Math.floor(maxStorageTimeSec * 1e9));
+          } else {
+            // Set to undefined to use MAX_DURATION (unlimited)
+            draft.scene.transformCache.maxStorageTimeNs = undefined;
+          }
+        });
+        this.updateSettingsTree();
+        return;
+      }
+
       // Update the configuration
       this.renderer.updateConfig((draft) => _.set(draft, path, value));
 

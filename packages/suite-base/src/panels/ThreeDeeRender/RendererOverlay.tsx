@@ -9,8 +9,13 @@ import { Ruler20Filled, Ruler20Regular } from "@fluentui/react-icons";
 import {
   Button,
   IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Paper,
   Tooltip,
+  useTheme,
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +29,7 @@ import {
   PanelContextMenuItem,
 } from "@lichtblick/suite-base/components/PanelContextMenu";
 import PublishGoalIcon from "@lichtblick/suite-base/components/PublishGoalIcon";
+import PublishPointIcon from "@lichtblick/suite-base/components/PublishPointIcon";
 import { usePanelMousePresence } from "@lichtblick/suite-base/hooks/usePanelMousePresence";
 import { HUD } from "@lichtblick/suite-base/panels/ThreeDeeRender/HUD";
 import { customTypography } from "@lichtblick/theme";
@@ -36,6 +42,51 @@ import { Stats } from "./Stats";
 import { MouseEventObject } from "./camera";
 import { PublishClickType } from "./renderables/PublishClickTool";
 import { InterfaceMode } from "./types";
+
+const PublishClickIcons: Record<PublishClickType, React.ReactElement> = {
+  pose_estimate: <InitialPoseIcon fontSize="small" />,
+  pose: <PublishGoalIcon fontSize="small" />,
+  point: <PublishPointIcon fontSize="small" />,
+};
+
+// Simple long press hook
+function useLongPress(callback: () => void, ms: number = 500) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef(callback);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  const start = useCallback(() => {
+    timeoutRef.current = setTimeout(() => {
+      callbackRef.current();
+    }, ms);
+  }, [ms]);
+
+  const stop = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return {
+    onMouseDown: start,
+    onMouseUp: stop,
+    onMouseLeave: stop,
+    onTouchStart: start,
+    onTouchEnd: stop,
+  };
+}
 
 
 const useStyles = makeStyles()((theme) => ({
@@ -349,6 +400,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                 <InitialPoseIcon fontSize="small" />
               </IconButton>
             </Tooltip>
+            {publishControls}
           </Paper>
         )}
       </div>

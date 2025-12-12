@@ -145,6 +145,13 @@ export type RendererConfig = {
     syncCamera?: boolean;
     /** Toggles visibility of all topics */
     topicsVisible?: boolean;
+    /** Transform cache settings */
+    transformCache?: {
+      /** Maximum number of transforms to cache per frame */
+      maxCapacityPerFrame?: number;
+      /** Maximum time span to cache transforms (in nanoseconds) */
+      maxStorageTimeNs?: bigint;
+    };
   };
   publish: {
     /** The type of message to publish when clicking in the scene */

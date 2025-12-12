@@ -230,6 +230,11 @@ export class SceneExtension<
       const frameLocked = renderable.userData.settings.frameLocked ?? true;
       const srcTime = frameLocked ? currentTime : renderable.userData.messageTime;
       const frameId = renderable.userData.frameId;
+      // #region agent log
+      if (renderable.name.includes('URDF') || renderable.name.includes('base_link') || renderable.name.includes('laser') || renderable.name.includes('scan')) {
+        fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneExtension.ts:230',message:'startFrame before updatePose',data:{renderableName:renderable.name,frameId,frameLocked,currentTime:currentTime.toString(),srcTime:srcTime.toString(),messageTime:renderable.userData.messageTime?.toString()||'undefined',renderFrameId,fixedFrameId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      }
+      // #endregion
       const updated = updatePose(
         renderable,
         this.renderer.transformTree,

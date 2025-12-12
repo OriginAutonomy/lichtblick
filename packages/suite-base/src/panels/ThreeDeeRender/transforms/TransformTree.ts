@@ -332,6 +332,90 @@ export class TransformTree {
     return false;
   }
 
+  /**
+   * Get total number of transforms cached across all frames
+   */
+  public getTotalTransforms(): number {
+    let total = this.defaultRootFrame.transformsSize();
+    for (const frame of this.#frames.values()) {
+      total += frame.transformsSize();
+    }
+    return total;
+  }
+
+  /**
+   * Get cache statistics including total transforms, frame count, and capacity info
+   */
+  public getCacheStats(): {
+    totalTransforms: number;
+    frameCount: number;
+    maxCapacityPerFrame: number;
+    maxStorageTime: Duration;
+    framesAtCapacity: number;
+    perFrameStats: Array<{ frameId: string; transforms: number; capacity: number }>;
+  } {
+    const perFrameStats: Array<{ frameId: string; transforms: number; capacity: number }> = [];
+    let framesAtCapacity = 0;
+    let totalTransforms = this.defaultRootFrame.transformsSize();
+
+    if (this.defaultRootFrame.transformsSize() === this.defaultRootFrame.maxCapacity) {
+      framesAtCapacity++;
+    }
+    perFrameStats.push({
+      frameId: String(CoordinateFrame.FALLBACK_FRAME_ID),
+      transforms: this.defaultRootFrame.transformsSize(),
+      capacity: this.defaultRootFrame.maxCapacity,
+    });
+
+    for (const frame of this.#frames.values()) {
+      const size = frame.transformsSize();
+      totalTransforms += size;
+      if (size === frame.maxCapacity) {
+        framesAtCapacity++;
+      }
+      perFrameStats.push({
+        frameId: frame.id,
+        transforms: size,
+        capacity: frame.maxCapacity,
+      });
+    }
+
+    return {
+      totalTransforms,
+      frameCount: this.#frames.size + 1, // +1 for defaultRootFrame
+      maxCapacityPerFrame: this.#maxCapacityPerFrame,
+      maxStorageTime: this.#maxStorageTime,
+      framesAtCapacity,
+      perFrameStats,
+    };
+  }
+
+  /**
+   * Update capacity limits for all frames. Existing frames will be updated,
+   * and new frames will use the new limits.
+   */
+  public updateCapacityLimits(maxStorageTime: Duration, maxCapacityPerFrame: number): void {
+    this.#maxStorageTime = maxStorageTime;
+    this.#maxCapacityPerFrame = maxCapacityPerFrame;
+
+    // Update existing frames
+    this.defaultRootFrame.maxStorageTime = maxStorageTime;
+    this.defaultRootFrame.maxCapacity = maxCapacityPerFrame;
+
+    for (const frame of this.#frames.values()) {
+      frame.maxStorageTime = maxStorageTime;
+      frame.maxCapacity = maxCapacityPerFrame;
+    }
+  }
+
+  public getMaxCapacityPerFrame(): number {
+    return this.#maxCapacityPerFrame;
+  }
+
+  public getMaxStorageTime(): Duration {
+    return this.#maxStorageTime;
+  }
+
   public static Clone(tree: TransformTree): TransformTree {
     const newTree = new TransformTree(
       tree.#transformPool,

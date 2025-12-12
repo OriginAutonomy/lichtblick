@@ -92,6 +92,7 @@ import {
   AddTransformResult,
   CoordinateFrame,
   DEFAULT_MAX_CAPACITY_PER_FRAME,
+  MAX_DURATION,
   TransformTree,
   Transform,
 } from "./transforms";
@@ -228,7 +229,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   #transformPool = new ObjectPool(Transform.Empty, {
     maxCapacity: 5 * DEFAULT_MAX_CAPACITY_PER_FRAME,
   });
-  public transformTree = new TransformTree(this.#transformPool);
+  public transformTree: TransformTree;
 
   public coordinateFrameList: SelectEntry[] = [];
   public currentTime = 0n;
@@ -315,6 +316,16 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
       edgeMaterial: this.outlineMaterial,
       fetchAsset: this.#fetchAsset,
     });
+
+    // Initialize transform tree with config values
+    const maxCapacityPerFrame =
+      config.scene.transformCache?.maxCapacityPerFrame ?? DEFAULT_MAX_CAPACITY_PER_FRAME;
+    const maxStorageTime =
+      config.scene.transformCache?.maxStorageTimeNs != null &&
+      config.scene.transformCache.maxStorageTimeNs !== undefined
+        ? config.scene.transformCache.maxStorageTimeNs
+        : MAX_DURATION;
+    this.transformTree = new TransformTree(this.#transformPool, maxStorageTime, maxCapacityPerFrame);
 
     this.#scene = new THREE.Scene();
 
@@ -646,6 +657,15 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
 
   public updateConfig(updateHandler: (draft: RendererConfig) => void): void {
     this.config = produce(this.config, updateHandler);
+    // Update transform tree capacity limits if config changed
+    const maxCapacityPerFrame =
+      this.config.scene.transformCache?.maxCapacityPerFrame ?? DEFAULT_MAX_CAPACITY_PER_FRAME;
+    const maxStorageTime =
+      this.config.scene.transformCache?.maxStorageTimeNs != null &&
+      this.config.scene.transformCache.maxStorageTimeNs !== undefined
+        ? this.config.scene.transformCache.maxStorageTimeNs
+        : MAX_DURATION;
+    this.transformTree.updateCapacityLimits(maxStorageTime, maxCapacityPerFrame);
     this.emit("configChange", this);
   }
 
@@ -1081,6 +1101,9 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   ): void {
     const t = translation;
     const q = rotation;
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Renderer.ts:1082',message:'addTransform called',data:{parentFrameId,childFrameId,stamp:stamp.toString(),translation:{x:t.x,y:t.y,z:t.z},rotation:{x:q.x,y:q.y,z:q.z,w:q.w}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
 
     tempVec3[0] = t.x;
     tempVec3[1] = t.y;
@@ -1094,6 +1117,9 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     const transform = this.#transformPool.acquire();
     transform.setPositionRotation(tempVec3, tempQuat);
     const status = this.transformTree.addTransform(childFrameId, parentFrameId, stamp, transform);
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/6be7cdfa-005b-444b-b26d-7cfae485f680',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Renderer.ts:1096',message:'addTransform result',data:{parentFrameId,childFrameId,status:AddTransformResult[status]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
 
     if (status === AddTransformResult.UPDATED) {
       this.coordinateFrameList = this.transformTree.frameList();
