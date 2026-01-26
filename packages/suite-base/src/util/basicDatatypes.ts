@@ -8,8 +8,9 @@
 import { foxgloveMessageSchemas, generateRosMsgDefinition } from "@foxglove/schemas/internal";
 
 import { ros1, ros2galactic } from "@lichtblick/rosmsg-msgs-common";
-import { RosDatatypes } from "@lichtblick/suite-base/types/RosDatatypes";
 import { moveitMessageDefinitions } from "@lichtblick/suite-base/types/MoveItMessageDefinitions";
+import { nvbloxMessageDefinitions } from "@lichtblick/suite-base/types/NvbloxMessageDefinitions";
+import { RosDatatypes } from "@lichtblick/suite-base/types/RosDatatypes";
 
 /**
  * basicDatatypes is a map containing definitions for ROS common datatypes and foxglove datatypes
@@ -52,5 +53,10 @@ basicDatatypes.set("foxglove_msgs/ImageMarkerArray", {
 
 // Add MoveIt message definitions
 for (const [name, def] of Object.entries(moveitMessageDefinitions)) {
+  basicDatatypes.set(name, def);
+}
+
+// Add Nvblox message definitions
+for (const [name, def] of Object.entries(nvbloxMessageDefinitions)) {
   basicDatatypes.set(name, def);
 }
