@@ -15,17 +15,15 @@ type Props = {
 
 export function WebRTCCamera({ config }: Props): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  console.log("WebRTCCamera config:", config)
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
-  const [latencyList, setLatencyList] = useState<number[]>([]);
   const [status, setStatus] = useState<string>("Idle");
   const [latency, setLatency] = useState<number | null>(null);
 
-  // Default to the IP you most commonly use
   const [serverUrl, setServerUrl] = useState<string>("http://172.16.8.77:8080/offer");
 
   const startWebRTC = async (url: string) => {
-    // 1. Cleanup old connection
     if (pcRef.current) {
       pcRef.current.close();
       pcRef.current = null;
@@ -33,47 +31,36 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
 
     setStatus("Initializing WebRTC...");
 
-    // 2. Create PeerConnection
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
     pcRef.current = pc;
 
-    // Handle incoming video stream
     pc.ontrack = (event) => {
-      console.log("Received track:", event);
       if (videoRef.current && event.streams[0]) {
         videoRef.current.srcObject = event.streams[0];
       }
     };
 
-    // We are only receiving video
     pc.addTransceiver("video", { direction: "recvonly" });
 
-    // 3. Create & Set Local Offer
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
     setStatus("Gathering Candidates...");
 
-    // =========================
-    // SMART ICE GATHERING STRATEGY
-    // =========================
     await new Promise<void>((resolve) => {
       let isResolved = false;
 
       const safeResolve = () => {
         if (!isResolved) {
           isResolved = true;
-          // Clean up listeners is handled by the fact we just proceed
           resolve();
         }
       };
 
-      // A. Hard Timeout (2s) - If network is totally weird, just go after 2s.
       const hardTimeout = setTimeout(safeResolve, 2000);
 
-      // B. "Smart" Buffer - Once we see the first IP, wait 500ms then go.
       let bufferTimeout: NodeJS.Timeout | null = null;
 
       const checkState = () => {
@@ -87,10 +74,8 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
 
       pc.addEventListener("icegatheringstatechange", checkState);
 
-      // Listen for individual candidates
       pc.onicecandidate = (event) => {
         if (event.candidate && !bufferTimeout) {
-          // First candidate found! Start the 500ms countdown.
           bufferTimeout = setTimeout(() => {
             pc.removeEventListener("icegatheringstatechange", checkState);
             clearTimeout(hardTimeout);
@@ -99,16 +84,13 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
         }
       };
     });
-    // =========================
 
     setStatus("Sending Offer...");
 
-    // 4. Send the Offer to Python
     try {
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // pc.localDescription now contains the Candidates we found during the wait
         body: JSON.stringify({
           sdp: pc.localDescription?.sdp,
           type: pc.localDescription?.type,
@@ -135,7 +117,6 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
     });
   };
 
-  // Auto-connect on mount
   useEffect(() => {
     handleReconnect();
 
@@ -147,7 +128,6 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Statistics Loop (Updates every 1s)
   useInterval(() => {
     const pc = pcRef.current;
 
@@ -160,19 +140,11 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
             }
           }
 
-          // Latency Calculation (RTT)
           if (report.type === "candidate-pair" && report.state === "succeeded") {
             const rttSeconds = report.currentRoundTripTime || report.roundTripTime;
             if (typeof rttSeconds === "number") {
               const rttMs = parseFloat((rttSeconds * 1000).toFixed(1));
               setLatency(rttMs);
-
-              setLatencyList((prev) => {
-                // Keep the last 600 samples (10 mins) to prevent memory issues
-                const updated = [...prev, rttMs];
-                if (updated.length > 600) updated.shift();
-                return updated;
-              });
             }
           }
         });
