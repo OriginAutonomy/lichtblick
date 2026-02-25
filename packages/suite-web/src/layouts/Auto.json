@@ -345,9 +345,9 @@
           "showCollisionObjects": true
         },
         "/monitored_planning_scene": {
-          "visible": false,
+          "visible": true,
           "showCollisionObjects": true,
-          "collisionObjectColor": "#ff0000"
+          "collisionObjectColor": "#00cc8880"
         }
       },
       "publish": {

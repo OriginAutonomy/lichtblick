@@ -221,6 +221,11 @@ export const defaultLayout: LayoutData =
             "colorMap": "turbo",
             "pointSize": 8,
             "flatColor": "#ff0000ff"
+          },
+          "/monitored_planning_scene": {
+            "visible": true,
+            "showCollisionObjects": true,
+            "collisionObjectColor": "#00cc8880"
           }
         },
         "publish": {

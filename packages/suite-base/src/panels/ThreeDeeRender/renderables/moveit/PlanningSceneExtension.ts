@@ -12,9 +12,13 @@ import { PlanningScene } from "@lichtblick/suite-base/types/MoveItMessages";
 import type { IRenderer, AnyRendererSubscription } from "../../IRenderer";
 import { SceneExtension, PartialMessageEvent } from "../../SceneExtension";
 import { RenderablePlanningScene } from "./RenderablePlanningScene";
+import { RenderableAttachedCollisionObject } from "./RenderableAttachedCollisionObject";
 import { BaseSettings } from "../../settings";
 import { SettingsTreeEntry } from "../../SettingsManager";
 import { topicIsConvertibleToSchema } from "../../topicIsConvertibleToSchema";
+import { AnyFrameId } from "../../transforms";
+import { updatePose } from "../../updatePose";
+import { missingTransformMessage, MISSING_TRANSFORM } from "../transforms";
 
 export type LayerSettingsPlanningScene = BaseSettings & {
   showCollisionObjects: boolean;
@@ -44,6 +48,9 @@ export type TopicPlanningScene = {
 export class PlanningSceneExtension extends SceneExtension<RenderablePlanningScene> {
   public static extensionId = "foxglove.PlanningScene";
   #topics = new Map<string, TopicPlanningScene>();
+  // Separate map for attached collision objects (e.g., sander tool)
+  // These need their own frameId (parent link frame) for correct positioning
+  #attachedObjects = new Map<string, RenderableAttachedCollisionObject>();
 
   public constructor(renderer: IRenderer) {
     super("foxglove.PlanningScene", renderer);
@@ -51,7 +58,6 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
     renderer.on("transformTreeUpdated", this.#handleTransformTreeUpdated);
     renderer.on("topicsChanged", this.#handleTopicsChanged);
 
-    // Add debug logging
     console.log("🔧 PlanningSceneExtension: Constructor called");
   }
 
@@ -59,18 +65,65 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
     this.renderer.off("transformTreeUpdated", this.#handleTransformTreeUpdated);
     this.renderer.off("topicsChanged", this.#handleTopicsChanged);
 
-    // Clean up renderables
     for (const renderable of this.renderables.values()) {
       renderable.dispose();
     }
     this.renderables.clear();
     this.#topics.clear();
 
+    // Clean up attached objects
+    for (const attached of this.#attachedObjects.values()) {
+      this.remove(attached);
+      attached.dispose();
+    }
+    this.#attachedObjects.clear();
+
     super.dispose();
   }
 
   public override settingsNodes(): SettingsTreeEntry[] {
     return this.#buildSettingsTree();
+  }
+
+  /**
+   * Override startFrame to also update poses for attached collision objects,
+   * which are tracked in a separate map from the main renderables.
+   */
+  public override startFrame(
+    currentTime: bigint,
+    renderFrameId: AnyFrameId,
+    fixedFrameId: AnyFrameId,
+  ): void {
+    // Let the base class handle the main planning scene renderables
+    super.startFrame(currentTime, renderFrameId, fixedFrameId);
+
+    // Also update poses for attached collision objects (e.g., sander on flange)
+    for (const attached of this.#attachedObjects.values()) {
+      if (!attached.visible) {
+        continue;
+      }
+
+      const frameLocked = attached.userData.settings.frameLocked ?? true;
+      const srcTime = frameLocked ? currentTime : attached.userData.messageTime;
+      const frameId = attached.userData.frameId;
+      const path = attached.userData.settingsPath;
+
+      const updated = updatePose(
+        attached,
+        this.renderer.transformTree,
+        renderFrameId,
+        fixedFrameId,
+        frameId,
+        currentTime,
+        srcTime,
+      );
+      if (!updated) {
+        const message = missingTransformMessage(renderFrameId, fixedFrameId, frameId);
+        this.renderer.settings.errors.add(path, MISSING_TRANSFORM, message);
+      } else {
+        this.renderer.settings.errors.remove(path, MISSING_TRANSFORM);
+      }
+    }
   }
 
   #handleTransformTreeUpdated = (): void => {
@@ -91,6 +144,7 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
     console.log(`🔧 PlanningSceneExtension: Received message on topic: ${topic}`);
     console.log(`🔧 Message keys:`, Object.keys(planningScene));
     console.log(`🔧 Collision objects count: ${planningScene.world?.collision_objects?.length ?? 0}`);
+    console.log(`🔧 Attached collision objects count: ${planningScene.robot_state?.attached_collision_objects?.length ?? 0}`);
     console.log(`🔧 Is diff: ${planningScene.is_diff}`);
     console.log(`🔧 Robot state exists: ${!!planningScene.robot_state?.joint_state?.header}`);
 
@@ -109,11 +163,26 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
     }
     topicPlanningScene.receiveTime = receiveTime;
 
+    // Force planning scene topics to always be visible and subscribed
+    const topicConfig = this.renderer.config.topics[topic] as
+      | Partial<LayerSettingsPlanningScene>
+      | undefined;
+    if (topicConfig?.visible !== true || topicConfig?.showCollisionObjects !== true) {
+      this.saveSetting(["topics", topic, "visible"], true);
+      this.saveSetting(["topics", topic, "showCollisionObjects"], true);
+      this.updateSettingsTree();
+    }
+
+    // Handle main planning scene renderable (world collision objects)
     let renderable = this.renderables.get(topic);
     if (!renderable) {
       console.log(`🔧 PlanningSceneExtension: Creating new renderable for topic: ${topic}`);
-      // Cast to full PlanningScene since we've validated required fields exist
-      renderable = new RenderablePlanningScene(topic, planningScene as PlanningScene, receiveTime, this.renderer);
+      renderable = new RenderablePlanningScene(
+        topic,
+        planningScene as PlanningScene,
+        receiveTime,
+        this.renderer,
+      );
       this.add(renderable);
       this.renderables.set(topic, renderable);
       console.log(`🔧 PlanningSceneExtension: Renderable created and added to scene`);
@@ -121,7 +190,65 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
       console.log(`🔧 PlanningSceneExtension: Updating existing renderable for topic: ${topic}`);
       renderable.update(planningScene as PlanningScene, receiveTime);
     }
+
+    // Handle attached collision objects (e.g., sander tool on flange)
+    this.#updateAttachedCollisionObjects(topic, planningScene as PlanningScene, receiveTime);
   };
+
+  /**
+   * Process attached_collision_objects from robot_state.
+   * Creates/updates separate renderables for each attached object,
+   * each positioned in the correct parent link frame (e.g., "flange").
+   */
+  #updateAttachedCollisionObjects(
+    topic: string,
+    planningScene: PlanningScene,
+    receiveTime: bigint,
+  ): void {
+    const attachedObjects = planningScene.robot_state.attached_collision_objects ?? [];
+
+    // Track which attached object IDs are in the current message
+    const currentIds = new Set<string>();
+
+    for (const attachedObj of attachedObjects) {
+      if (!attachedObj.object?.id || !attachedObj.link_name) {
+        continue;
+      }
+
+      const objectId = attachedObj.object.id;
+      const key = `${topic}::attached::${objectId}`;
+      currentIds.add(key);
+
+      const existing = this.#attachedObjects.get(key);
+      if (existing) {
+        existing.updateAttachedObject(attachedObj, receiveTime);
+      } else {
+        const attached = new RenderableAttachedCollisionObject(
+          topic,
+          attachedObj,
+          receiveTime,
+          this.renderer,
+        );
+        this.add(attached);
+        this.#attachedObjects.set(key, attached);
+        console.log(
+          `PlanningSceneExtension: Created attached object "${objectId}" in frame "${attachedObj.link_name}"`,
+        );
+      }
+    }
+
+    // Remove attached objects that are no longer present (only for non-diff updates)
+    if (!planningScene.is_diff) {
+      for (const [key, attached] of this.#attachedObjects) {
+        if (key.startsWith(`${topic}::attached::`) && !currentIds.has(key)) {
+          this.remove(attached);
+          attached.dispose();
+          this.#attachedObjects.delete(key);
+          console.log(`PlanningSceneExtension: Removed detached object "${key}"`);
+        }
+      }
+    }
+  }
 
   public override getSubscriptions(): readonly AnyRendererSubscription[] {
     return [
@@ -131,7 +258,7 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
         subscription: { handler: this.#handlePlanningScene },
       },
     ];
-  };
+  }
 
   public override handleSettingsAction = (action: SettingsTreeAction): void => {
     const path = action.payload.path;
@@ -143,7 +270,6 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
       return;
     }
 
-    // Path should be ["topics", topicName, fieldName]
     if (path[0] !== "topics") {
       console.log(`🔧 PlanningSceneExtension: Path doesn't start with 'topics'`);
       return;
@@ -158,42 +284,42 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
 
     console.log(`🔧 PlanningSceneExtension: Updating ${fieldName} for topic ${topicName} to:`, action.payload.value);
 
-    // Save the setting using the base class method
     this.saveSetting(path, action.payload.value);
 
-    // Update the renderable if it exists
     const renderable = this.renderables.get(topicName);
     if (renderable) {
       console.log(`🔧 PlanningSceneExtension: Found renderable for topic ${topicName}, updating...`);
-
-      // Handle visibility changes
       if (fieldName === "visible") {
         console.log(`🔧 PlanningSceneExtension: Setting visibility to:`, action.payload.value);
-
-        // If turning off, force clear all objects first
         if (action.payload.value === false) {
-          console.log(`🔧 PlanningSceneExtension: Topic being turned OFF - force clearing all objects`);
           renderable.forceClearAllObjects();
+
+          for (const [key, attached] of this.#attachedObjects) {
+            if (key.startsWith(`${topicName}::attached::`)) {
+              attached.visible = false;
+            }
+          }
+        } else {
+          for (const [key, attached] of this.#attachedObjects) {
+            if (key.startsWith(`${topicName}::attached::`)) {
+              attached.visible = true;
+            }
+          }
         }
 
-        // Force update the renderable's visibility (this will handle the state change detection)
         renderable.updateVisibility();
       }
 
-      // Handle other field changes
       if (fieldName === "showCollisionObjects" || fieldName === "collisionObjectColor") {
         console.log(`🔧 PlanningSceneExtension: Updating collision object settings...`);
-        // Update the renderable with current data to refresh the visualization
         renderable.update(renderable.userData.planningScene, renderable.userData.receiveTime);
       }
     } else {
       console.log(`🔧 PlanningSceneExtension: No renderable found for topic ${topicName}`);
     }
 
-    // Update the settings tree to reflect changes
     this.updateSettingsTree();
   };
-
 
   #buildSettingsTree(): SettingsTreeEntry[] {
     const handler = this.handleSettingsAction;
@@ -203,7 +329,6 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
     console.log("🔧 Available topics:", this.renderer.topics?.map(t => ({ name: t.name, schemaName: t.schemaName, convertibleTo: t.convertibleTo })));
     console.log("🔧 Looking for schemas:", Array.from(PLANNING_SCENE_DATATYPES));
 
-    // Check all available topics for PlanningScene messages
     for (const topic of this.renderer.topics ?? []) {
       console.log(`🔧 Checking topic: ${topic.name} with schema: ${topic.schemaName}`);
       console.log(`🔧 Topic convertibleTo:`, topic.convertibleTo);
@@ -213,9 +338,10 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
 
       if (isConvertible) {
         console.log(`✅ Found matching topic: ${topic.name}`);
-        const config = this.renderer.config.topics[topic.name] as Partial<LayerSettingsPlanningScene>;
+        const config = this.renderer.config.topics[topic.name] as
+          | Partial<LayerSettingsPlanningScene>
+          | undefined;
 
-        // Read visibility from current config, not force it
         const visible = config?.visible ?? DEFAULT_SETTINGS.visible;
         console.log(`🔧 Topic ${topic.name} visibility from config: ${visible}`);
 
@@ -225,7 +351,7 @@ export class PlanningSceneExtension extends SceneExtension<RenderablePlanningSce
             label: topic.name,
             icon: "Cube",
             order: topic.name.toLocaleLowerCase(),
-            visible: visible, // Use actual config value
+            visible,
             handler,
             fields: {
               showCollisionObjects: {
