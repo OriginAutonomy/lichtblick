@@ -354,7 +354,7 @@
           "frameLocked": true
         },
         "/nvblox_node/tsdf_layer": {
-          "visible": true,
+          "visible": false,
           "frameLocked": true
         },
         "/global_mapper/nvblox_node/mesh": {
@@ -362,7 +362,7 @@
           "frameLocked": true
         },
         "/global_mapper/nvblox_node/tsdf_layer": {
-          "visible": true,
+          "visible": false,
           "frameLocked": true
         }
       },

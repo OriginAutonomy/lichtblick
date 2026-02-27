@@ -221,6 +221,27 @@ export const defaultLayout: LayoutData =
             "colorMap": "turbo",
             "pointSize": 8,
             "flatColor": "#ff0000ff"
+          },
+          "/monitored_planning_scene": {
+            "visible": true,
+            "showCollisionObjects": true,
+            "collisionObjectColor": "#00cc8880"
+          },
+          "/nvblox_node/mesh": {
+            "visible": true,
+            "frameLocked": true
+          },
+          "/nvblox_node/tsdf_layer": {
+            "visible": false,
+            "frameLocked": true
+          },
+          "/global_mapper/nvblox_node/mesh": {
+            "visible": true,
+            "frameLocked": true
+          },
+          "/global_mapper/nvblox_node/tsdf_layer": {
+            "visible": false,
+            "frameLocked": true
           }
         },
         "publish": {
