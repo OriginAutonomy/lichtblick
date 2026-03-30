@@ -14,5 +14,5 @@ export const layouts: Record<string, unknown> = {
   "manual": Manual,
   "auto": Auto,
   "teleop": Teleop,
-  "handheldmapper": HandheldMapper,
+  "handheld-mapper": HandheldMapper,
 };
