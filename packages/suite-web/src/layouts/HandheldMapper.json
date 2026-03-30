@@ -27,10 +27,6 @@
         "far": 5000
       },
       "followMode": "follow-pose",
-      "scene": {},
-      "transforms": {},
-      "topics": {},
-      "layers": {},
       "publish": {
         "type": "point",
         "poseTopic": "/move_base_simple/goal",
@@ -72,8 +68,17 @@
       },
       "followMode": "follow-pose",
       "followTf": "map",
-      "scene": {},
-      "transforms": {},
+      "scene": {
+        "backgroundColor": "#b0c2bf",
+        "transforms": {
+          "labelSize": 0.09,
+          "lineWidth": 0,
+          "showLabel": true,
+          "enablePreloading": true,
+          "axisSize": 0.2
+        },
+        "meshUpAxis": "z_up"
+      },
       "topics": {
         "/handheld_mapper/nvblox_node/color_layer": {
           "visible": false
@@ -87,20 +92,14 @@
         "/handheld_mapper/nvblox_node/semantic_layer": {
           "visible": false
         },
+        "/handheld_mapper/nvblox_node/block_room_planes": {
+          "visible": true
+        },
         "/handheld_mapper/nvblox_node/tsdf_layer": {
           "visible": false
         }
       },
       "layers": {},
-      "publish": {
-        "type": "point",
-        "poseTopic": "/move_base_simple/goal",
-        "pointTopic": "/clicked_point",
-        "poseEstimateTopic": "/evaluatepose",
-        "poseEstimateXDeviation": 0.5,
-        "poseEstimateYDeviation": 0.5,
-        "poseEstimateThetaDeviation": 0.26179939
-      },
       "imageMode": {}
     }
   },
@@ -113,6 +112,6 @@
     "first": "Image!2qoi78c",
     "second": "3D!3sstqco",
     "direction": "row",
-    "splitPercentage": 62.22537207654146
+    "splitPercentage": 62
   }
 }
