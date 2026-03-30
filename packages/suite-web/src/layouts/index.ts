@@ -8,9 +8,11 @@
 import Manual from "./Manual.json";
 import Auto from "./Auto.json";
 import Teleop from "./Teleop.json";
+import HandheldMapper from "./HandheldMapper.json";
 
 export const layouts: Record<string, unknown> = {
   "manual": Manual,
   "auto": Auto,
   "teleop": Teleop,
+  "handheldmapper": HandheldMapper,
 };
