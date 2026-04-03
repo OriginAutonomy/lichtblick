@@ -11,7 +11,8 @@ services:
       target: serve
     image: ${LICHTBLICK_IMAGE:-ghcr.io/originautonomy/lichtblick-ui:v1.19.12}
     pull_policy: ${PULL_POLICY:-missing}
-    network_mode: host
+    ports:
+      - "8017:8017"
     restart: unless-stopped
     environment:
       - NODE_ENV=production
