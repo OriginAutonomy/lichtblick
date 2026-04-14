@@ -1,32 +1,40 @@
-# Build stage
-FROM node:16 AS build
+# syntax=docker/dockerfile:1
+
+# ── Stage 1: build ────────────────────────────────────────────────
+FROM node:20-slim AS build
 WORKDIR /src
-COPY . ./
 
-RUN corepack enable
-RUN yarn install --immutable
+# .yarn/ must exist before corepack/yarn runs (.yarnrc.yml references .yarn/yarn-wrapper.js)
+COPY .yarn/ .yarn/
 
+# Copy root manifests + patches (needed by yarn during resolution)
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY patches/ patches/
+COPY packages/ packages/
+COPY web/package.json web/
+COPY desktop/package.json desktop/
+COPY benchmark/package.json benchmark/
+
+RUN --mount=type=cache,target=/root/.yarn \
+    corepack enable && yarn install --immutable
+
+# Copy full source + build
+COPY . .
 RUN yarn run web:build:prod
 
-# Release stage
-FROM caddy:2.5.2-alpine
-WORKDIR /src
-COPY --from=build /src/web/.webpack ./
+# Bake serve.json so cache headers are applied at runtime
+RUN cp web/serve.json web/.webpack/
 
+# ── Stage 2: serve ────────────────────────────────────────────────
+FROM node:20-slim AS serve
+
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g serve@14
+
+WORKDIR /app
+COPY --from=build --chown=node:node /src/web/.webpack ./
+
+USER node
 EXPOSE 8017
 
-COPY <<EOF /entrypoint.sh
-# Optionally override the default layout with one provided via bind mount
-mkdir -p /lichtblick
-touch /lichtblick/default-layout.json
-index_html=\$(cat index.html)
-replace_pattern='/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/'
-replace_value=\$(cat /lichtblick/default-layout.json)
-echo "\${index_html/"\$replace_pattern"/\$replace_value}" > index.html
-
-# Continue executing the CMD
-exec "\$@"
-EOF
-
-ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
-CMD ["caddy", "file-server", "--listen", ":8017"]
+ENTRYPOINT ["serve", "-s", ".", "-l", "8017", "--no-clipboard", "--cors"]
