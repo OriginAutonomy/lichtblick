@@ -5,6 +5,7 @@
 
 import { renderHook } from "@testing-library/react";
 
+import { DEFAULT_X_END_TIME } from "@lichtblick/suite-base/panels/StateTransitions/hooks/constants";
 import { StateTransitionConfig } from "@lichtblick/suite-base/panels/StateTransitions/types";
 
 import useChartScalesAndBounds from "./useChartScalesAndBounds";
@@ -61,6 +62,28 @@ describe("useChartScalesAndBounds", () => {
     });
   });
 
+  it("should return correct databounds when only xAxisMinValue is defined", () => {
+    const customConfig = { ...config, xAxisMinValue: 50 };
+    const { result } = renderHook(() =>
+      useChartScalesAndBounds(undefined, undefined, 1000, customConfig),
+    );
+    expect(result.current.databounds).toEqual({
+      x: { min: 50, max: 1000 },
+      y: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+    });
+  });
+
+  it("should return correct databounds when only xAxisMaxValue is defined", () => {
+    const customConfig = { ...config, xAxisMaxValue: 500 };
+    const { result } = renderHook(() =>
+      useChartScalesAndBounds(undefined, undefined, 1000, customConfig),
+    );
+    expect(result.current.databounds).toEqual({
+      x: { min: 0, max: 500 },
+      y: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+    });
+  });
+
   it("should return correct databounds when endTimeSinceStart is defined", () => {
     const { result } = renderHook(() =>
       useChartScalesAndBounds(undefined, undefined, 1000, config),
@@ -71,11 +94,14 @@ describe("useChartScalesAndBounds", () => {
     });
   });
 
-  it("should return undefined databounds when endTimeSinceStart is undefined", () => {
+  it("should default to safe databounds when endTimeSinceStart is undefined", () => {
     const { result } = renderHook(() =>
       useChartScalesAndBounds(undefined, undefined, undefined, config),
     );
-    expect(result.current.databounds).toBeUndefined();
+    expect(result.current.databounds).toEqual({
+      x: { min: 0, max: DEFAULT_X_END_TIME },
+      y: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+    });
   });
 
   it("should return correct width and sizeRef", () => {

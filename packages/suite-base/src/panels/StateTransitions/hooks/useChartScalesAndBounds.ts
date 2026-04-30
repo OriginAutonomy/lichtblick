@@ -5,6 +5,7 @@ import { ScaleOptions } from "chart.js";
 import { RefCallback, useEffect, useMemo } from "react";
 import { useResizeDetector } from "react-resize-detector";
 
+import { DEFAULT_X_END_TIME } from "@lichtblick/suite-base/panels/StateTransitions/hooks/constants";
 import { StateTransitionConfig } from "@lichtblick/suite-base/panels/StateTransitions/types";
 import { Bounds } from "@lichtblick/suite-base/types/Bounds";
 
@@ -56,15 +57,13 @@ const useChartScalesAndBounds = (
   // below, otherwise playing through a recording will update the currentTimeSince start and return
   // a new fixedBounds reference which causes expensive downstream rendering.
   const fixedBounds = useMemo(() => {
-    if (endTimeSinceStart == undefined) {
-      return undefined;
-    }
+    const xDefaultMax = endTimeSinceStart ?? DEFAULT_X_END_TIME;
 
     if (config.xAxisMinValue != undefined || config.xAxisMaxValue != undefined) {
       return {
         x: {
           min: config.xAxisMinValue ?? 0,
-          max: config.xAxisMaxValue ?? endTimeSinceStart,
+          max: config.xAxisMaxValue ?? xDefaultMax,
         },
         y: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
       };
@@ -75,7 +74,7 @@ const useChartScalesAndBounds = (
     // than constantly adjusting the end time to the latest loaded state transition while data
     // is loading.
     return {
-      x: { min: 0, max: endTimeSinceStart },
+      x: { min: 0, max: xDefaultMax },
       y: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
     };
   }, [config.xAxisMaxValue, config.xAxisMinValue, endTimeSinceStart]);
