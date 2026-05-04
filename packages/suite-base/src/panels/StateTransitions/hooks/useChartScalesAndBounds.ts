@@ -44,8 +44,12 @@ const useChartScalesAndBounds = (
       border: {
         display: false,
       },
+      title: {
+        display: (config.xAxisLabel ?? "").length > 0,
+        text: config.xAxisLabel,
+      },
     };
-  }, []);
+  }, [config.xAxisLabel]);
 
   // Compute the fixed bounds (either via min/max x-axis config or end time since start).
   //

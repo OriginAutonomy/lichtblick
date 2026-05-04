@@ -229,6 +229,8 @@ export class PlotCoordinator extends EventEmitter<PlotCoordinatorEventTypes> {
 
     this.updateAction.showXAxisLabels = config.showXAxisLabels;
     this.updateAction.showYAxisLabels = config.showYAxisLabels;
+    this.updateAction.xAxisLabel = config.xAxisLabel;
+    this.updateAction.yAxisLabel = config.yAxisLabel;
     this.updateAction.referenceLines = referenceLines;
 
     if (configYBoundsChanged) {
@@ -505,10 +507,11 @@ export class PlotCoordinator extends EventEmitter<PlotCoordinatorEventTypes> {
   }
 
   private subscribeTopicRanges(seriesKeysByTopic: Map<string, Set<SeriesConfigKey>>): void {
-    if (!this.datasetsBuilder.handleMessageRange) {
+    const handleMessageRange = this.datasetsBuilder.handleMessageRange?.bind(this.datasetsBuilder);
+
+    if (!handleMessageRange) {
       return;
     }
-    const builder = this.datasetsBuilder;
 
     // Cancel subscriptions for topics that are no longer needed
     for (const topic of this.rangeSubscriptionCancels.keys()) {
@@ -539,7 +542,7 @@ export class PlotCoordinator extends EventEmitter<PlotCoordinatorEventTypes> {
             if (!startTime) {
               continue;
             }
-            builder.handleMessageRange!(batch, { isReset }, startTime);
+            handleMessageRange(batch, { isReset }, startTime);
             isReset = false;
             this.queueDispatchDownsample();
           }
