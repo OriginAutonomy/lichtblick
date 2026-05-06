@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import ListAltIcon from "@mui/icons-material/ListAlt";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Badge } from "@mui/material";
 import { forwardRef, useCallback, useContext, useMemo } from "react";
@@ -51,6 +52,13 @@ const PanelToolbarControlsComponent = forwardRef<HTMLDivElement, PanelToolbarCon
     );
 
     const hasSettings = usePanelStateStore(hasSettingsSelector);
+    const incrementSequenceNumber = usePanelStateStore((store) => store.incrementSequenceNumber);
+
+    const refreshPanel = useCallback(() => {
+      if (panelId) {
+        incrementSequenceNumber(panelId);
+      }
+    }, [incrementSequenceNumber, panelId]);
 
     const openSettings = useCallback(async () => {
       if (panelId) {
@@ -91,6 +99,9 @@ const PanelToolbarControlsComponent = forwardRef<HTMLDivElement, PanelToolbarCon
             <ListAltIcon color={showLogs === true ? "primary" : undefined} />
           </ToolbarIconButton>
         </Badge>
+        <ToolbarIconButton title="Refresh panel" onClick={refreshPanel} data-testid="panel-refresh">
+          <RefreshIcon />
+        </ToolbarIconButton>
         {showSettingsButton && (
           <ToolbarIconButton title="Settings" onClick={openSettings}>
             <SettingsIcon />

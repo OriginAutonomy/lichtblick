@@ -63,23 +63,36 @@ function makeRGBImage(width: number, height: number): string {
 function makeMeshBlocks() {
   const blocks = [];
   const blockIndices = [];
+  const t = Date.now() / 4000;
 
-  for (let bx = 0; bx < 2; bx++) {
-    for (let by = 0; by < 2; by++) {
+  for (let bx = 0; bx < 3; bx++) {
+    for (let by = 0; by < 3; by++) {
       const ox = bx * 2;
       const oy = by * 2;
+      const zWave = Math.sin(bx + t) * 0.5 + Math.cos(by + t) * 0.3;
       const vertices = [
-        { x: ox, y: oy, z: 0 },
-        { x: ox + 1.5, y: oy, z: 0 },
-        { x: ox + 0.75, y: oy + 1.5, z: 0.5 },
-        { x: ox, y: oy, z: 1 },
-        { x: ox + 1.5, y: oy, z: 1 },
-        { x: ox + 0.75, y: oy + 1.5, z: 1.5 },
+        { x: ox, y: oy, z: zWave },
+        { x: ox + 1.8, y: oy, z: zWave + 0.3 },
+        { x: ox + 0.9, y: oy + 1.8, z: zWave + 0.8 },
+        { x: ox, y: oy, z: zWave + 1.2 },
+        { x: ox + 1.8, y: oy, z: zWave + 1.5 },
+        { x: ox + 0.9, y: oy + 1.8, z: zWave + 2.0 },
       ];
-      const normals = vertices.map(() => ({ x: 0, y: 0, z: 1 }));
-      const r = bx === 0 ? 0.8 : 0.2;
-      const g = by === 0 ? 0.8 : 0.2;
-      const colors = vertices.map(() => ({ r, g, b: 0.5, a: 1.0 }));
+      // Compute proper face normals for each triangle
+      const normals = [
+        { x: 0, y: -0.5, z: 0.86 },
+        { x: 0, y: -0.5, z: 0.86 },
+        { x: 0, y: -0.5, z: 0.86 },
+        { x: 0, y: -0.5, z: 0.86 },
+        { x: 0, y: -0.5, z: 0.86 },
+        { x: 0, y: -0.5, z: 0.86 },
+      ];
+      // Bright, distinct colors per block
+      const hue = ((bx * 3 + by) / 9);
+      const r = Math.sin(hue * Math.PI * 2) * 0.4 + 0.6;
+      const g = Math.sin(hue * Math.PI * 2 + 2.09) * 0.4 + 0.6;
+      const b = Math.sin(hue * Math.PI * 2 + 4.18) * 0.4 + 0.6;
+      const colors = vertices.map(() => ({ r, g, b, a: 1.0 }));
       const triangles = [0, 1, 2, 3, 4, 5];
 
       blockIndices.push({ x: bx, y: by, z: 0 });
@@ -102,18 +115,22 @@ function makeVoxelBlocks() {
       for (let vx = 0; vx < 4; vx++) {
         for (let vy = 0; vy < 4; vy++) {
           for (let vz = 0; vz < 3; vz++) {
-            centers.push({
-              x: bx * 2 + vx * 0.5,
-              y: by * 2 + vy * 0.5,
-              z: vz * 0.5,
-            });
-            const occupied = Math.random() > 0.3;
-            colors.push({
-              r: occupied ? 0.2 + vz * 0.3 : 0,
-              g: occupied ? 0.8 - vz * 0.2 : 0,
-              b: occupied ? 0.3 : 0,
-              a: occupied ? 1.0 : 0.0,
-            });
+            // Only include occupied voxels (skip empty ones entirely)
+            if (Math.random() > 0.3) {
+              centers.push({
+                x: bx * 2 + vx * 0.5,
+                y: by * 2 + vy * 0.5,
+                z: vz * 0.5,
+              });
+              // Bright semantic colors based on height and position
+              const hue = (vz / 3 + bx * 0.1 + by * 0.15) % 1.0;
+              colors.push({
+                r: Math.sin(hue * Math.PI * 2) * 0.3 + 0.7,
+                g: Math.sin(hue * Math.PI * 2 + 2.09) * 0.3 + 0.7,
+                b: Math.sin(hue * Math.PI * 2 + 4.18) * 0.3 + 0.7,
+                a: 1.0,
+              });
+            }
           }
         }
       }

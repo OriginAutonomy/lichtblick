@@ -27,6 +27,7 @@ import ChangePanelMenu from "@lichtblick/suite-base/components/PanelToolbar/Chan
 import ToolbarIconButton from "@lichtblick/suite-base/components/PanelToolbar/ToolbarIconButton";
 import { getPanelTypeFromMosaic } from "@lichtblick/suite-base/components/PanelToolbar/utils";
 import { useCurrentLayoutActions } from "@lichtblick/suite-base/context/CurrentLayoutContext";
+import { usePanelStateStore } from "@lichtblick/suite-base/context/PanelStateContext";
 
 type Props = {
   isUnknownPanel: boolean;
@@ -140,6 +141,15 @@ function PanelActionsDropdownComponent({ isUnknownPanel }: Props): React.JSX.Ele
     [getCurrentLayout, getPanelType, mosaicActions, mosaicWindowActions, splitPanel, tabId],
   );
 
+  const incrementSequenceNumber = usePanelStateStore((store) => store.incrementSequenceNumber);
+
+  const refreshPanel = useCallback(() => {
+    if (panelContext?.id) {
+      incrementSequenceNumber(panelContext.id);
+    }
+    handleMenuClose();
+  }, [incrementSequenceNumber, panelContext?.id]);
+
   const enterFullscreen = useCallback(() => {
     panelContext?.enterFullscreen();
     handleMenuClose();
@@ -176,6 +186,13 @@ function PanelActionsDropdownComponent({ isUnknownPanel }: Props): React.JSX.Ele
       });
     }
 
+    items.push({
+      key: "refresh",
+      text: t("refreshPanel"),
+      onClick: refreshPanel,
+      "data-testid": "panel-menu-refresh",
+    });
+
     items.push({ key: "divider", type: "divider" });
 
     items.push({
@@ -194,6 +211,7 @@ function PanelActionsDropdownComponent({ isUnknownPanel }: Props): React.JSX.Ele
     isUnknownPanel,
     panelContext?.id,
     panelContext?.isFullscreen,
+    refreshPanel,
     split,
     t,
   ]);
