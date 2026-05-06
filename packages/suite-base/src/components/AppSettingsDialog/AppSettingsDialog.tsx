@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -115,7 +115,7 @@ export function AppSettingsDialog(
           />
           <Tab className={classes.tab} label={t("about")} value="about" />
         </Tabs>
-        <Stack direction="row" fullHeight overflowY="auto">
+        <Stack direction="row" fullHeight overflowY="auto" style={{ scrollbarGutter: "stable" }}>
           <section
             className={cx(classes.tabPanel, {
               [classes.tabPanelActive]: activeTab === "general",

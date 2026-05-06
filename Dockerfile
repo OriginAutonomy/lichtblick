@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Stage 1: build ────────────────────────────────────────────────
-FROM node:20-slim AS build
+FROM node:22-slim AS build
 WORKDIR /src
 
 # .yarn/ must exist before corepack/yarn runs (.yarnrc.yml references .yarn/yarn-wrapper.js)

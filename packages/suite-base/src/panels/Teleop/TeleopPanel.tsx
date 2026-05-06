@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 import * as _ from "lodash-es";
 import { Typography } from "@mui/material";
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DeepPartial } from "ts-essentials";
 
 import { ros1 } from "@lichtblick/rosmsg-msgs-common";
@@ -100,6 +100,7 @@ function TeleopPanel(props: Readonly<TeleopPanelProps>): React.JSX.Element {
 
   // advertise topic
   const { topic: currentTopic } = config;
+  const isInitialMount = useRef(true);
   useLayoutEffect(() => {
     if (!currentTopic) {
       return;
@@ -113,7 +114,10 @@ function TeleopPanel(props: Readonly<TeleopPanelProps>): React.JSX.Element {
     });
 
     return () => {
-      context.unadvertise?.(currentTopic);
+      if (!isInitialMount.current) {
+        context.unadvertise?.(currentTopic);
+      }
+      isInitialMount.current = false;
     };
   }, [context, currentTopic]);
 
@@ -223,11 +227,18 @@ function TeleopPanel(props: Readonly<TeleopPanelProps>): React.JSX.Element {
       return;
     }
 
+    const publishMessage = () => {
+      try {
+        context.publish?.(currentTopic, message);
+      } catch (error) {
+        console.error("Failed to publish message:", error);
+      }
+    };
+
+    publishMessage();
+
     const intervalMs = (1000 * 1) / config.publishRate;
-    context.publish?.(currentTopic, message);
-    const intervalHandle = setInterval(() => {
-      context.publish?.(currentTopic, message);
-    }, intervalMs);
+    const intervalHandle = setInterval(publishMessage, intervalMs);
 
     return () => {
       clearInterval(intervalHandle);
