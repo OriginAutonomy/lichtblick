@@ -22,42 +22,40 @@ function makeHeader(frameId: string) {
 
 // --- Image helpers ---
 
-function makeDepthImage(width: number, height: number): number[] {
-  const data: number[] = [];
+function makeDepthImage(width: number, height: number): string {
+  const floats = new Float32Array(width * height);
   const t = Date.now() / 2000;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const dist = 0.5 + 4.5 * ((Math.sin(x / 8 + t) + Math.cos(y / 8 + t) + 2) / 4);
-      data.push(dist);
+      floats[y * width + x] = 0.5 + 4.5 * ((Math.sin(x / 8 + t) + Math.cos(y / 8 + t) + 2) / 4);
     }
   }
-  return data;
+  return Buffer.from(floats.buffer).toString("base64");
 }
 
-function makeSemanticImage(width: number, height: number): number[] {
-  const data: number[] = [];
+function makeSemanticImage(width: number, height: number): string {
+  const bytes = new Uint8Array(width * height);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const classId = ((Math.floor(x / 8) + Math.floor(y / 8)) % 11);
-      data.push(classId);
+      const classId = (Math.floor(x / 8) + Math.floor(y / 8)) % 11;
+      bytes[y * width + x] = classId * 23;
     }
   }
-  return data;
+  return Buffer.from(bytes.buffer).toString("base64");
 }
 
-function makeRGBImage(width: number, height: number): number[] {
-  const data: number[] = [];
+function makeRGBImage(width: number, height: number): string {
+  const bytes = new Uint8Array(width * height * 3);
   const t = Date.now() / 3000;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      data.push(
-        Math.floor(((Math.sin(x / 10 + t) + 1) / 2) * 255),
-        Math.floor(((Math.cos(y / 10 + t) + 1) / 2) * 255),
-        Math.floor(((Math.sin((x + y) / 15 + t) + 1) / 2) * 255),
-      );
+      const i = (y * width + x) * 3;
+      bytes[i] = Math.floor(((Math.sin(x / 10 + t) + 1) / 2) * 255);
+      bytes[i + 1] = Math.floor(((Math.cos(y / 10 + t) + 1) / 2) * 255);
+      bytes[i + 2] = Math.floor(((Math.sin((x + y) / 15 + t) + 1) / 2) * 255);
     }
   }
-  return data;
+  return Buffer.from(bytes.buffer).toString("base64");
 }
 
 // --- Mesh helpers ---
@@ -318,15 +316,27 @@ const schemas: Record<string, string> = {
       encoding: { type: "string" },
       is_bigendian: { type: "number" },
       step: { type: "number" },
-      data: { type: "array", items: { type: "number" } },
+      data: { type: "string", contentEncoding: "base64" },
     },
   }),
 
   "nav_msgs/msg/Path": JSON.stringify({
     type: "object",
     properties: {
-      header: { type: "object" },
-      poses: { type: "array", items: { type: "object" } },
+      header: { type: "object", properties: {
+        stamp: { type: "object", properties: { sec: { type: "number" }, nsec: { type: "number" } } },
+        frame_id: { type: "string" },
+      } },
+      poses: { type: "array", items: { type: "object", properties: {
+        header: { type: "object", properties: {
+          stamp: { type: "object", properties: { sec: { type: "number" }, nsec: { type: "number" } } },
+          frame_id: { type: "string" },
+        } },
+        pose: { type: "object", properties: {
+          position: { type: "object", properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" } } },
+          orientation: { type: "object", properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" }, w: { type: "number" } } },
+        } },
+      } } },
     },
   }),
 
@@ -335,8 +345,21 @@ const schemas: Record<string, string> = {
     properties: {
       header: { type: "object" },
       block_size_m: { type: "number" },
-      block_indices: { type: "array" },
-      blocks: { type: "array" },
+      block_indices: { type: "array", items: { type: "object", properties: {
+        x: { type: "number" }, y: { type: "number" }, z: { type: "number" },
+      } } },
+      blocks: { type: "array", items: { type: "object", properties: {
+        vertices: { type: "array", items: { type: "object", properties: {
+          x: { type: "number" }, y: { type: "number" }, z: { type: "number" },
+        } } },
+        normals: { type: "array", items: { type: "object", properties: {
+          x: { type: "number" }, y: { type: "number" }, z: { type: "number" },
+        } } },
+        colors: { type: "array", items: { type: "object", properties: {
+          r: { type: "number" }, g: { type: "number" }, b: { type: "number" }, a: { type: "number" },
+        } } },
+        triangles: { type: "array", items: { type: "number" } },
+      } } },
       clear: { type: "boolean" },
     },
   }),
@@ -347,8 +370,17 @@ const schemas: Record<string, string> = {
       header: { type: "object" },
       block_size_m: { type: "number" },
       voxel_size_m: { type: "number" },
-      block_indices: { type: "array" },
-      blocks: { type: "array" },
+      block_indices: { type: "array", items: { type: "object", properties: {
+        x: { type: "number" }, y: { type: "number" }, z: { type: "number" },
+      } } },
+      blocks: { type: "array", items: { type: "object", properties: {
+        centers: { type: "array", items: { type: "object", properties: {
+          x: { type: "number" }, y: { type: "number" }, z: { type: "number" },
+        } } },
+        colors: { type: "array", items: { type: "object", properties: {
+          r: { type: "number" }, g: { type: "number" }, b: { type: "number" }, a: { type: "number" },
+        } } },
+      } } },
       clear: { type: "boolean" },
       layer_type: { type: "number" },
     },
@@ -358,7 +390,9 @@ const schemas: Record<string, string> = {
     type: "object",
     properties: {
       header: { type: "object" },
-      origin: { type: "object" },
+      origin: { type: "object", properties: {
+        x: { type: "number" }, y: { type: "number" }, z: { type: "number" },
+      } },
       resolution: { type: "number" },
       width: { type: "number" },
       height: { type: "number" },
@@ -370,7 +404,26 @@ const schemas: Record<string, string> = {
   "visualization_msgs/msg/MarkerArray": JSON.stringify({
     type: "object",
     properties: {
-      markers: { type: "array", items: { type: "object" } },
+      markers: { type: "array", items: { type: "object", properties: {
+        header: { type: "object" },
+        ns: { type: "string" },
+        id: { type: "number" },
+        type: { type: "number" },
+        action: { type: "number" },
+        pose: { type: "object", properties: {
+          position: { type: "object", properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" } } },
+          orientation: { type: "object", properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" }, w: { type: "number" } } },
+        } },
+        scale: { type: "object", properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" } } },
+        color: { type: "object", properties: { r: { type: "number" }, g: { type: "number" }, b: { type: "number" }, a: { type: "number" } } },
+        lifetime: { type: "object", properties: { sec: { type: "number" }, nsec: { type: "number" } } },
+        frame_locked: { type: "boolean" },
+        points: { type: "array", items: { type: "object", properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" } } } },
+        colors: { type: "array", items: { type: "object", properties: { r: { type: "number" }, g: { type: "number" }, b: { type: "number" }, a: { type: "number" } } } },
+        text: { type: "string" },
+        mesh_resource: { type: "string" },
+        mesh_use_embedded_materials: { type: "boolean" },
+      } } },
     },
   }),
 
@@ -396,11 +449,13 @@ const schemas: Record<string, string> = {
       header: { type: "object" },
       height: { type: "number" },
       width: { type: "number" },
-      fields: { type: "array" },
+      fields: { type: "array", items: { type: "object", properties: {
+        name: { type: "string" }, offset: { type: "number" }, datatype: { type: "number" }, count: { type: "number" },
+      } } },
       is_bigendian: { type: "boolean" },
       point_step: { type: "number" },
       row_step: { type: "number" },
-      data: { type: "string" },
+      data: { type: "string", contentEncoding: "base64" },
       is_dense: { type: "boolean" },
     },
   }),
