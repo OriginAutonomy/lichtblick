@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -95,6 +95,7 @@ export const DEFAULT_IMAGE_CONFIG = {
   rotation: 0 as 0 | 90 | 180 | 270,
   brightness: INITIAL_BRIGHTNESS,
   contrast: INITIAL_CONTRAST,
+  semanticColormap: false,
   ...IMAGE_DEFAULT_COLOR_MODE_SETTINGS,
 };
 

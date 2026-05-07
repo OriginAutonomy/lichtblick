@@ -1,0 +1,18 @@
+foxglove_bridge:
+  ros__parameters:
+    # Override QoS for topics that use BEST_EFFORT reliability.
+    # Without these, foxglove_bridge subscribes with SYSTEM_DEFAULT QoS
+    # which may cause silent message drops on incompatible topics.
+    qos_overrides:
+      /coverage_planner_paths:
+        reliability: best_effort
+        durability: volatile
+      /nvblox_node/semantic_layer:
+        reliability: best_effort
+        durability: volatile
+      /nvblox_node/mesh:
+        reliability: best_effort
+        durability: volatile
+      /nvblox_node/map_slice:
+        reliability: best_effort
+        durability: volatile

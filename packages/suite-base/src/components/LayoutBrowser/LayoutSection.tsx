@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -48,21 +48,6 @@ export default function LayoutSection({
   onRevert: (item: Layout) => void;
   onMakePersonalCopy: (item: Layout) => void;
 }>): React.JSX.Element {
-  // Get multiple selected layouts and handle bulk actions
-  const selectedLayouts = items?.filter((layout) => multiSelectedIds.includes(layout.id)) ?? [];
-  const handleDuplicateSelected = () => {
-    selectedLayouts.forEach(onDuplicate);
-  };
-  const handleDeleteSelected = () => {
-    selectedLayouts.forEach(onDelete);
-  };
-  const handleOverwriteSelected = () => {
-    selectedLayouts.forEach(onOverwrite);
-  };
-  const handleRevertSelected = () => {
-    selectedLayouts.forEach(onRevert);
-  };
-
   return (
     <Stack>
       {title != undefined && (
@@ -73,7 +58,7 @@ export default function LayoutSection({
         </Stack>
       )}
       <List disablePadding={disablePadding}>
-        {items != undefined && items.length === 0 && (
+        {items?.length === 0 && (
           <Stack paddingX={2}>
             <Typography variant="body2" color="text.secondary">
               {emptyText}
@@ -89,18 +74,12 @@ export default function LayoutSection({
             selected={selectedId === layout.id}
             onSelect={onSelect}
             onRename={onRename}
-            onDuplicate={handleDuplicateSelected}
-            onDelete={(clickedLayout) => {
-              if (multiSelectedIds.includes(clickedLayout.id)) {
-                handleDeleteSelected();
-              } else {
-                onDelete(clickedLayout);
-              }
-            }}
+            onDuplicate={onDuplicate}
+            onDelete={onDelete}
             onShare={onShare}
             onExport={onExport}
-            onOverwrite={handleOverwriteSelected}
-            onRevert={handleRevertSelected}
+            onOverwrite={onOverwrite}
+            onRevert={onRevert}
             onMakePersonalCopy={onMakePersonalCopy}
           />
         ))}

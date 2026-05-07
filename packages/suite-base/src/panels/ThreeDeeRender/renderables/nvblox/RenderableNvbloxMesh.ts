@@ -227,10 +227,13 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();
 
-    const material = new THREE.MeshStandardMaterial({
-      vertexColors: block.colors.length > 0,
+    const hasColors = block.colors.length > 0;
+    const material = new THREE.MeshPhongMaterial({
+      vertexColors: hasColors,
       side: THREE.DoubleSide,
       flatShading: false,
+      emissive: hasColors ? 0x222222 : 0x888888,
+      shininess: 30,
     });
     material.needsUpdate = true;
 

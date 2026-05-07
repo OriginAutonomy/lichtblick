@@ -178,8 +178,10 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
 
     // Create instanced mesh for voxels
     const geometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
-    const material = new THREE.MeshStandardMaterial({
+    const material = new THREE.MeshPhongMaterial({
       vertexColors: true,
+      emissive: 0x222222,
+      shininess: 30,
     });
 
     const instancedMesh = new THREE.InstancedMesh(geometry, material, voxelCount);

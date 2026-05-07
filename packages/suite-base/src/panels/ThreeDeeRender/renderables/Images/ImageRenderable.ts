@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -52,6 +52,7 @@ export interface ImageRenderableSettings extends Partial<ColorModeSettings> {
   color: string;
   brightness: number;
   contrast: number;
+  semanticColormap?: boolean;
 }
 
 const DEFAULT_DISTANCE = 1;
@@ -193,7 +194,8 @@ export class ImageRenderable extends Renderable<ImageUserData> {
       !_.isEqual(prevSettings.gradient, newSettings.gradient) ||
       prevSettings.colorMap !== newSettings.colorMap ||
       prevSettings.minValue !== newSettings.minValue ||
-      prevSettings.maxValue !== newSettings.maxValue
+      prevSettings.maxValue !== newSettings.maxValue ||
+      prevSettings.semanticColormap !== newSettings.semanticColormap
     ) {
       this.userData.settings = newSettings;
       // Decode the current image again, which takes into account the new options

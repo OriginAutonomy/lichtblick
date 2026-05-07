@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -28,7 +28,9 @@ import { DeserializingIterableSource } from "@lichtblick/suite-base/players/Iter
 import { freezeMetadata } from "@lichtblick/suite-base/players/IterablePlayer/freezeMetadata";
 import NoopMetricsCollector from "@lichtblick/suite-base/players/NoopMetricsCollector";
 import PlayerAlertManager from "@lichtblick/suite-base/players/PlayerAlertManager";
+import { subtractTimes } from "@lichtblick/suite-base/players/UserScriptPlayer/transformerWorker/typescript/userUtils/time";
 import { PLAYER_CAPABILITIES } from "@lichtblick/suite-base/players/constants";
+import { applySamplingGuardToSubscriptions } from "@lichtblick/suite-base/players/samplingGuard";
 import {
   AdvertiseOptions,
   Player,
@@ -43,6 +45,8 @@ import {
   TopicSelection,
   TopicStats,
 } from "@lichtblick/suite-base/players/types";
+import { HIGH_FREQUENCY_ALERT } from "@lichtblick/suite-base/players/utils/constants";
+import { isTopicHighFrequency } from "@lichtblick/suite-base/players/utils/isTopicHighFrequency";
 import { RosDatatypes } from "@lichtblick/suite-base/types/RosDatatypes";
 import delay from "@lichtblick/suite-base/util/delay";
 
@@ -55,7 +59,6 @@ import {
 } from "./IIterableSource";
 
 const log = Log.getLogger(__filename);
-
 // Number of bytes that we aim to keep in the cache.
 // Setting this to higher than 1.5GB caused the renderer process to crash on linux.
 // See: https://github.com/foxglove/studio/pull/1733
@@ -81,7 +84,6 @@ const SEEK_ON_START_NS = BigInt(99 * 1e6);
 const MEMORY_INFO_BUFFERED_MSGS = "Buffered messages";
 
 const EMPTY_ARRAY = Object.freeze([]);
-
 export type IterablePlayerOptions = {
   metricsCollector?: PlayerMetricsCollectorInterface;
 
@@ -175,6 +177,7 @@ export class IterablePlayer implements Player {
   #bufferedSource: IDeserializedIterableSource;
   // Buffering source implementation. We store a reference to it here so we can access buffer information such as loaded ranges & memory size.
   #bufferImpl: BufferedIterableSource;
+  readonly #deserializingSource?: DeserializingIterableSource;
 
   // Some states register an abort controller to signal they should abort
   #abort?: AbortController;
@@ -186,6 +189,7 @@ export class IterablePlayer implements Player {
   #blockLoadingProcess?: Promise<void>;
 
   #messageRangeSource?: IDeserializedIterableSource;
+  #samplingEnabled: boolean = false;
 
   #queueEmitState: ReturnType<typeof debouncePromise>;
 
@@ -221,13 +225,15 @@ export class IterablePlayer implements Player {
         maxCacheSizeBytes: 300 * MEGABYTE_IN_BYTES, // 300mb
       });
       this.#bufferImpl = bufferInterface;
-      this.#bufferedSource = new DeserializingIterableSource(bufferInterface);
+      this.#deserializingSource = new DeserializingIterableSource(bufferInterface);
+      this.#bufferedSource = this.#deserializingSource;
     }
 
     this.#name = name;
     this.#urlParams = urlParams;
     this.#metricsCollector = metricsCollector ?? new NoopMetricsCollector();
     this.#metricsCollector.playerConstructed();
+
     this.#enablePreload = enablePreload ?? true;
     this.#sourceId = sourceId;
 
@@ -339,7 +345,21 @@ export class IterablePlayer implements Player {
 
   public setSubscriptions(newSubscriptions: SubscribePayload[]): void {
     log.debug("set subscriptions", newSubscriptions);
-    this.#subscriptions = newSubscriptions;
+    this.#subscriptions = applySamplingGuardToSubscriptions(newSubscriptions);
+    this.#samplingEnabled = this.#subscriptions.some(
+      (subscription) => subscription.samplingRequest?.mode === "latest-per-render-tick",
+    );
+    // Warn once when sampling is requested on a deserialized source, where it is not supported.
+    // Sampling (latest-per-render-tick) is only implemented for serialized sources via
+    // DeserializingIterableSource. For deserialized sources all messages are yielded as-is.
+    if (!this.#samplingEnabled && this.#deserializingSource == undefined) {
+      log.debug(
+        "latest-per-render-tick sampling is not supported for deserialized sources. Messages will be delivered without sampling.",
+      );
+    }
+    if (!this.#samplingEnabled) {
+      this.#deserializingSource?.setSamplingWindowEnd(undefined);
+    }
 
     const allTopics: TopicSelection = new Map(
       this.#subscriptions.map((subscription) => [subscription.topic, subscription]),
@@ -357,6 +377,7 @@ export class IterablePlayer implements Player {
 
     this.#allTopics = allTopics;
     this.#preloadTopics = preloadTopics;
+
     this.#blockLoader?.setTopics(this.#preloadTopics);
 
     // If the player is playing, the playing state will detect any subscription changes and adjust
@@ -386,12 +407,15 @@ export class IterablePlayer implements Player {
 
   public getBatchIterator(
     topic: string,
+    options?: { start?: Time; end?: Time },
   ): AsyncIterableIterator<Readonly<IteratorResult>> | undefined {
     const topicSelection = new Map([[topic, { topic }]]);
 
     return this.#messageRangeSource?.messageIterator({
       topics: topicSelection,
       consumptionType: "full",
+      start: options?.start,
+      end: options?.end,
     });
   }
 
@@ -551,6 +575,10 @@ export class IterablePlayer implements Player {
       // Studio does not like duplicate topics or topics with different datatypes
       // Check for duplicates or for mismatched datatypes
       const uniqueTopics = new Map<string, Topic>();
+      const duration = subtractTimes(this.#end, this.#start);
+      this.#providerTopicStats = topicStats;
+      let hasHighFrequencyTopic = false;
+
       for (const topic of topics) {
         const existingTopic = uniqueTopics.get(topic.name);
         if (existingTopic) {
@@ -561,12 +589,26 @@ export class IterablePlayer implements Player {
           });
           continue;
         }
-
         uniqueTopics.set(topic.name, topic);
+
+        if (!hasHighFrequencyTopic) {
+          hasHighFrequencyTopic = isTopicHighFrequency({
+            topicStats,
+            topic,
+            duration,
+          });
+
+          if (hasHighFrequencyTopic) {
+            this.#alertManager.addAlert(HIGH_FREQUENCY_ALERT.id, {
+              severity: HIGH_FREQUENCY_ALERT.severity,
+              message: HIGH_FREQUENCY_ALERT.message,
+              error: new Error(HIGH_FREQUENCY_ALERT.errorMessage),
+            });
+          }
+        }
       }
 
       this.#providerTopics = Array.from(uniqueTopics.values());
-      this.#providerTopicStats = topicStats;
 
       let idx = 0;
       for (const alert of alerts) {
@@ -662,6 +704,7 @@ export class IterablePlayer implements Player {
 
     // set the playIterator to the seek time
     await this.#bufferImpl.stopProducer();
+    this.#lastStamp = undefined;
 
     log.debug("Initializing forward iterator from", next);
     this.#playbackIterator = this.#bufferedSource.messageIterator({
@@ -699,6 +742,9 @@ export class IterablePlayer implements Player {
       this.#start,
       this.#end,
     );
+    if (this.#samplingEnabled) {
+      this.#deserializingSource?.setSamplingWindowEnd(stopTime);
+    }
 
     log.debug(`Playing from ${toString(this.#start)} to ${toString(stopTime)}`);
 
@@ -744,7 +790,9 @@ export class IterablePlayer implements Player {
         }
 
         if (iterResult.type === "stamp" && compare(iterResult.stamp, stopTime) >= 0) {
-          this.#lastStamp = iterResult.stamp;
+          if (!this.#lastStamp || compare(iterResult.stamp, this.#lastStamp) > 0) {
+            this.#lastStamp = iterResult.stamp;
+          }
           break;
         }
 
@@ -939,6 +987,9 @@ export class IterablePlayer implements Player {
     // The end time is inclusive.
     const targetTime = add(this.#currentTime, fromMillis(rangeMillis));
     const end: Time = clampTime(targetTime, this.#start, this.#untilTime ?? this.#end);
+    if (this.#samplingEnabled) {
+      this.#deserializingSource?.setSamplingWindowEnd(end);
+    }
 
     // If a lastStamp is available from the previous tick we check the stamp against our current
     // tick's end time. If this stamp is after our current tick's end time then we don't need to
@@ -955,7 +1006,6 @@ export class IterablePlayer implements Player {
         this.#currentTime = end;
         this.#messages = [];
         this.#queueEmitState();
-
         if (this.#untilTime && compare(this.#currentTime, this.#untilTime) >= 0) {
           this.pausePlayback();
         }
@@ -1166,6 +1216,7 @@ export class IterablePlayer implements Player {
 
   async #stateClose() {
     this.#isPlaying = false;
+
     await this.#blockLoader?.stopLoading();
     await this.#blockLoadingProcess;
     await this.#bufferImpl.terminate();

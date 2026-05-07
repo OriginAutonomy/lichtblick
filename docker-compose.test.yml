@@ -1,0 +1,14 @@
+services:
+  lichtblick:
+    build: .
+    ports:
+      - "8017:8017"
+
+  mock-server:
+    image: node:18
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "corepack enable && yarn install --immutable && npx ts-node ros/mock-server/mock-topics.ts"
+    ports:
+      - "8765:8765"
