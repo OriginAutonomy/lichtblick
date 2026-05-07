@@ -52,6 +52,7 @@ export interface ImageRenderableSettings extends Partial<ColorModeSettings> {
   color: string;
   brightness: number;
   contrast: number;
+  semanticColormap?: boolean;
 }
 
 const DEFAULT_DISTANCE = 1;
@@ -193,7 +194,8 @@ export class ImageRenderable extends Renderable<ImageUserData> {
       !_.isEqual(prevSettings.gradient, newSettings.gradient) ||
       prevSettings.colorMap !== newSettings.colorMap ||
       prevSettings.minValue !== newSettings.minValue ||
-      prevSettings.maxValue !== newSettings.maxValue
+      prevSettings.maxValue !== newSettings.maxValue ||
+      prevSettings.semanticColormap !== newSettings.semanticColormap
     ) {
       this.userData.settings = newSettings;
       // Decode the current image again, which takes into account the new options

@@ -95,6 +95,7 @@ export const DEFAULT_IMAGE_CONFIG = {
   rotation: 0 as 0 | 90 | 180 | 270,
   brightness: INITIAL_BRIGHTNESS,
   contrast: INITIAL_CONTRAST,
+  semanticColormap: false,
   ...IMAGE_DEFAULT_COLOR_MODE_SETTINGS,
 };
 

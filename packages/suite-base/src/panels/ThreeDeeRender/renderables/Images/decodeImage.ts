@@ -98,7 +98,7 @@ export const IMAGE_DEFAULT_COLOR_MODE_SETTINGS: Required<
 };
 const MIN_MAX_16_BIT = { minValue: 0, maxValue: 65535 };
 
-export type RawImageOptions = ColorModeSettings;
+export type RawImageOptions = ColorModeSettings & { semanticColormap?: boolean };
 
 /**
  * See also:

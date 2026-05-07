@@ -34,11 +34,15 @@ function makeDepthImage(width: number, height: number): string {
 }
 
 function makeSemanticImage(width: number, height: number): string {
-  const bytes = new Uint8Array(width * height);
+  const bytes = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const classId = (Math.floor(x / 8) + Math.floor(y / 8)) % 11;
-      bytes[y * width + x] = classId * 23;
+      const classId = (Math.floor(x / 8) + Math.floor(y / 8)) % 26;
+      const i = (y * width + x) * 4;
+      bytes[i] = classId;     // R = class ID
+      bytes[i + 1] = 0;       // G
+      bytes[i + 2] = 0;       // B
+      bytes[i + 3] = 255;     // A
     }
   }
   return Buffer.from(bytes.buffer).toString("base64");
@@ -544,7 +548,7 @@ console.log("  /nvblox_node/semantic_layer   (nvblox_msgs/msg/VoxelBlockLayer)")
 console.log("  /nvblox_node/map_slice       (nvblox_msgs/msg/DistanceMapSlice)");
 console.log("  /coverage_planner_paths      (nav_msgs/msg/Path)");
 console.log("  /camera/depth/image_raw      (sensor_msgs/msg/Image, 32FC1)");
-console.log("  /camera/semantic/image_raw   (sensor_msgs/msg/Image, mono8)");
+console.log("  /camera/semantic/image_raw   (sensor_msgs/msg/Image, rgba8, R=classId)");
 console.log("  /camera/color/image_raw      (sensor_msgs/msg/Image, rgb8)");
 console.log("  /markers                     (visualization_msgs/msg/MarkerArray)");
 console.log("  /scan                        (sensor_msgs/msg/LaserScan)");
@@ -647,9 +651,9 @@ setInterval(() => {
     header: makeHeader("base_link"),
     height: IMG_H,
     width: IMG_W,
-    encoding: "mono8",
+    encoding: "rgba8",
     is_bigendian: 0,
-    step: IMG_W,
+    step: IMG_W * 4,
     data: makeSemanticImage(IMG_W, IMG_H),
   });
 }, 100);

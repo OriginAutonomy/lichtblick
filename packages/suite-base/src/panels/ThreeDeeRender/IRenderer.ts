@@ -115,6 +115,8 @@ export type ImageModeConfig = Partial<ColorModeSettings> & {
   minValue?: number;
   /** Maximum (white) value for single-channel images */
   maxValue?: number;
+  /** Apply semantic segmentation color LUT (R channel = class ID) */
+  semanticColormap?: boolean;
 };
 
 export type RendererConfig = {

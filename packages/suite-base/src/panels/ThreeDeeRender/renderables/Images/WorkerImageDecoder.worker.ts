@@ -10,11 +10,15 @@ import type { RawImage } from "@foxglove/schemas";
 import * as Comlink from "@lichtblick/comlink";
 
 import { decodeRawImage, RawImageOptions } from "./decodeImage";
+import { colorizeSemanticImage } from "./semanticDecode";
 import type { Image as RosImage } from "../../ros";
 
 function decode(image: RosImage | RawImage, options: Partial<RawImageOptions>): ImageData {
   const result = new ImageData(image.width, image.height);
   decodeRawImage(image, options, result.data);
+  if (options.semanticColormap === true) {
+    colorizeSemanticImage(result.data, image.width, image.height);
+  }
   return Comlink.transfer(result, [result.data.buffer]);
 }
 

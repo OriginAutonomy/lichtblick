@@ -204,6 +204,7 @@ export class ImageMode
       this.renderer.queueAnimationFrame();
     });
 
+
     this.renderer.on("topicsChanged", this.#handleTopicsChanged);
     this.#handleTopicsChanged();
   }
@@ -396,6 +397,7 @@ export class ImageMode
       rotation,
       brightness,
       contrast,
+      semanticColormap,
     } = settings;
 
     const imageTopics = filterMap(this.renderer.topics ?? [], (topic) => {
@@ -527,6 +529,12 @@ export class ImageMode
       step: 5,
     };
 
+    fields.semanticColormap = {
+      input: "boolean",
+      label: "Semantic colormap",
+      value: semanticColormap ?? false,
+    };
+
     const imageTopic =
       imageTopicName != undefined ? this.renderer.topicsByName?.get(imageTopicName) : undefined;
     const isRawImageTopic =
@@ -628,6 +636,7 @@ export class ImageMode
       maxValue: config.maxValue,
       brightness: config.brightness,
       contrast: config.contrast,
+      semanticColormap: config.semanticColormap,
     });
     if (config.synchronize !== prevImageModeConfig.synchronize) {
       this.hud.removeGroup(IMAGE_MODE_HUD_GROUP_ID);
