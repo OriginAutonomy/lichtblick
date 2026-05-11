@@ -7,15 +7,13 @@ import { renderHook } from "@testing-library/react";
 
 import { Time, toSec } from "@lichtblick/rostime";
 import { useMessagePipelineGetter } from "@lichtblick/suite-base/components/MessagePipeline";
-import { subtractTimes } from "@lichtblick/suite-base/players/UserScriptPlayer/transformerWorker/typescript/userUtils/time";
+import { subtractTimes } from "@lichtblick/suite-base/util/time";
 
 import useStateTransitionsTime from "./useStateTransitionsTime";
 
 jest.mock("@lichtblick/suite-base/components/MessagePipeline");
 jest.mock("@lichtblick/rostime");
-jest.mock(
-  "@lichtblick/suite-base/players/UserScriptPlayer/transformerWorker/typescript/userUtils/time",
-);
+jest.mock("@lichtblick/suite-base/util/time");
 
 describe("useStateTransitionsTime", () => {
   const mockUseMessagePipelineGetter = useMessagePipelineGetter as jest.Mock;
