@@ -28,7 +28,7 @@ import { DeserializingIterableSource } from "@lichtblick/suite-base/players/Iter
 import { freezeMetadata } from "@lichtblick/suite-base/players/IterablePlayer/freezeMetadata";
 import NoopMetricsCollector from "@lichtblick/suite-base/players/NoopMetricsCollector";
 import PlayerAlertManager from "@lichtblick/suite-base/players/PlayerAlertManager";
-import { subtractTimes } from "@lichtblick/suite-base/players/UserScriptPlayer/transformerWorker/typescript/userUtils/time";
+import { subtractTimes } from "@lichtblick/suite-base/util/time";
 import { PLAYER_CAPABILITIES } from "@lichtblick/suite-base/players/constants";
 import { applySamplingGuardToSubscriptions } from "@lichtblick/suite-base/players/samplingGuard";
 import {
