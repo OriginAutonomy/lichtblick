@@ -993,12 +993,19 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
             },
           };
 
-          const datatypes =
-            context.dataSourceProfile === "ros2" ? PublishRos2Datatypes : PublishRos1Datatypes;
-          context.advertise?.("/initialpose", "geometry_msgs/PoseWithCovarianceStamped", {
-            datatypes,
-          });
-          context.publish("/initialpose", initialMessage);
+          if (config.publish.bridgeInitialPose === true) {
+            // Send to Android via JS bridge instead of publishing to ROS topic
+            (window as { LichtblickBridge?: { onInitialPose: (json: string) => void } }).LichtblickBridge?.onInitialPose(
+              JSON.stringify(initialMessage),
+            );
+          } else {
+            const datatypes =
+              context.dataSourceProfile === "ros2" ? PublishRos2Datatypes : PublishRos1Datatypes;
+            context.advertise?.("/initialpose", "geometry_msgs/PoseWithCovarianceStamped", {
+              datatypes,
+            });
+            context.publish("/initialpose", initialMessage);
+          }
         } else {
           // Publish evaluate pose
           const evaluateMessage = {
@@ -1044,7 +1051,7 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
       renderer?.poseInputTool.removeEventListener("foxglove.pose-input-submit", onPoseInputSubmit);
       renderer?.poseInputTool.removeEventListener("foxglove.pose-input-end", onPoseInputEnd);
     };
-  }, [context, renderer?.poseInputTool, poseInputMode]);
+  }, [context, renderer?.poseInputTool, poseInputMode, config.publish.bridgeInitialPose]);
 
   const onClickPublish = useCallback(() => {
     if (publishActive) {
