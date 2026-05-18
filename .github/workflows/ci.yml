@@ -5,6 +5,9 @@ on:
     branches: [develop, main]
   pull_request:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -18,8 +21,6 @@ jobs:
         config:
           # Specify names so that the GitHub branch protection settings for
           # required checks don't need to change if we ever change the commands used.
-          - name: npm audit
-            command: yarn npm audit --all --recursive --severity moderate
           - name: lint
             command: |
               # lint steps
@@ -34,8 +35,6 @@ jobs:
             command: yarn run build:packages
           - name: web
             command: yarn run web:build:prod
-          - name: desktop
-            command: yarn run desktop:build:prod
           - name: build benchmark
             command: yarn run benchmark:build:prod
           - name: test
@@ -49,15 +48,15 @@ jobs:
     name: ${{ matrix.config.name }} (${{ matrix.os }})
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4.0.3
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
       - run: corepack enable yarn
 
       - name: Restore cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .yarn/cache
@@ -69,27 +68,24 @@ jobs:
 
       - run: ${{ matrix.config.command }}
 
-  e2e:
+  e2e-web:
     runs-on: ubuntu-latest
 
-    name: e2e (ubuntu-latest)
+    name: e2e-web (ubuntu-latest)
 
-    # Set a fixed timezone to ensure consistent test results.
-    # Lichtblick uses the system's local timezone, which can cause test assertions
-    # to fail due to time discrepancies across different environments.
     env:
       TZ: Europe/Lisbon
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4.0.3
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
       - run: corepack enable yarn
 
       - name: Restore cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .yarn/cache
@@ -99,15 +95,66 @@ jobs:
 
       - run: yarn install --immutable
 
-      - name: Apply AppArmor Fix (Ubuntu)
-        # Required for Playwright on Ubuntu to work properly
-        # See: https://github.com/microsoft/playwright/issues/34251
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
 
-      - name: test:e2e:desktop:ci (ubuntu-latest)
-        uses: coactions/setup-xvfb@v1
+      - name: Run E2E Web tests
+        run: yarn test:e2e:web:ci
+
+      - name: Upload Web E2E Test Reports
+        if: always()
+        uses: actions/upload-artifact@v7
         with:
-          working-directory: ./
-          run: |
-            yarn desktop:build:prod
-            yarn test:e2e:desktop:ci
+          name: e2e-web-reports
+          path: e2e/reports/web/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Merge reports from all shards and generate summary
+  e2e-report:
+    if: always()
+    needs: [e2e-web]
+    runs-on: ubuntu-latest
+
+    name: e2e-report (merge all reports)
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: corepack enable yarn
+
+      - name: Restore cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            .yarn/cache
+            **/node_modules
+          key: v5-${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: v5-${{ runner.os }}-yarn-
+
+      - run: yarn install --immutable
+
+      - name: Download web reports
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-web-reports
+          path: e2e/reports/web
+        continue-on-error: true
+
+      - name: Generate E2E Test Summary
+        run: |
+          echo "Generating E2E test summary from merged reports..."
+          yarn ts-node e2e/ci-helpers/generate-test-summary.ts >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Merged E2E Test Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-test-reports-merged
+          path: |
+            e2e/reports/
+            playwright-report/
+          retention-days: 7

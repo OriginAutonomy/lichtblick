@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v2.0. If a copy of the MPL was not distributed with this
@@ -11,7 +11,14 @@ import * as _ from "lodash-es";
 import { signal } from "@lichtblick/den/async";
 import { fromSec } from "@lichtblick/rostime";
 import { PLAYER_CAPABILITIES } from "@lichtblick/suite-base/players/constants";
-import { MessageEvent, PlayerPresence, PlayerState } from "@lichtblick/suite-base/players/types";
+import {
+  InternalSubscribePayload,
+  MessageEvent,
+  PlayerPresence,
+  PlayerState,
+} from "@lichtblick/suite-base/players/types";
+import { HIGH_FREQUENCY_ALERT } from "@lichtblick/suite-base/players/utils/constants";
+import * as highFrequencyUtils from "@lichtblick/suite-base/players/utils/isTopicHighFrequency";
 import { mockTopicSelection } from "@lichtblick/suite-base/test/mocks/mockTopicSelection";
 
 import {
@@ -660,6 +667,133 @@ describe("IterablePlayer", () => {
     await player.isClosed;
   });
 
+  it("should detect high frequency topics during initialization", async () => {
+    class HighFrequencyTopicSource implements IDeserializedIterableSource {
+      public readonly sourceType = "deserialized";
+      public async initialize(): Promise<Initialization> {
+        const topicStats = new Map();
+        topicStats.set("high-freq-topic", {
+          numMessages: 6000, // High message count
+          firstMessageTime: { sec: 0, nsec: 0 },
+          lastMessageTime: { sec: 1, nsec: 0 },
+        });
+
+        return {
+          start: { sec: 0, nsec: 0 },
+          end: { sec: 1, nsec: 0 },
+          topics: [{ name: "high-freq-topic", schemaName: "std_msgs/String" }],
+          topicStats,
+          profile: undefined,
+          alerts: [],
+          datatypes: new Map(),
+          publishersByTopic: new Map(),
+        };
+      }
+
+      public async *messageIterator() {}
+      public async getBackfillMessages() {
+        return [];
+      }
+    }
+
+    const source = new HighFrequencyTopicSource();
+    const player = new IterablePlayer({
+      source,
+      enablePreload: false,
+      sourceId: "test",
+    });
+
+    const store = new PlayerStateStore(4);
+    player.setListener(async (state) => {
+      await store.add(state);
+    });
+
+    const playerStates = await store.done;
+    expect(_.last(playerStates)!.alerts).toEqual([
+      {
+        severity: HIGH_FREQUENCY_ALERT.severity,
+        message: HIGH_FREQUENCY_ALERT.message,
+        error: expect.any(Error),
+      },
+    ]);
+
+    player.close();
+    await player.isClosed;
+
+    (console.warn as jest.Mock).mockClear();
+  });
+
+  it("should only call isTopicHighFrequency once even with multiple high frequency topics", async () => {
+    const isTopicHighFrequencySpy = jest.spyOn(highFrequencyUtils, "isTopicHighFrequency");
+
+    class MultiHighFreqTopicsSource implements IDeserializedIterableSource {
+      public readonly sourceType = "deserialized";
+      public async initialize(): Promise<Initialization> {
+        const topicStats = new Map();
+        // Add multiple high frequency topics
+        topicStats.set("high-freq-topic-1", {
+          numMessages: 6000,
+          firstMessageTime: { sec: 0, nsec: 0 },
+          lastMessageTime: { sec: 1, nsec: 0 },
+        });
+        topicStats.set("high-freq-topic-2", {
+          numMessages: 7000,
+          firstMessageTime: { sec: 0, nsec: 0 },
+          lastMessageTime: { sec: 1, nsec: 0 },
+        });
+
+        return {
+          start: { sec: 0, nsec: 0 },
+          end: { sec: 1, nsec: 0 },
+          topics: [
+            { name: "high-freq-topic-1", schemaName: "std_msgs/String" },
+            { name: "high-freq-topic-2", schemaName: "std_msgs/String" },
+          ],
+          topicStats,
+          profile: undefined,
+          alerts: [],
+          datatypes: new Map(),
+          publishersByTopic: new Map(),
+        };
+      }
+
+      public async *messageIterator() {}
+      public async getBackfillMessages() {
+        return [];
+      }
+    }
+
+    const source = new MultiHighFreqTopicsSource();
+    const player = new IterablePlayer({
+      source,
+      enablePreload: false,
+      sourceId: "test",
+    });
+
+    const store = new PlayerStateStore(4);
+    player.setListener(async (state) => {
+      await store.add(state);
+    });
+
+    const playerStates = await store.done;
+
+    expect(isTopicHighFrequencySpy).toHaveBeenCalledTimes(1);
+    expect(_.last(playerStates)!.alerts).toEqual([
+      {
+        severity: HIGH_FREQUENCY_ALERT.severity,
+        message: HIGH_FREQUENCY_ALERT.message,
+        error: expect.any(Error),
+      },
+    ]);
+
+    player.close();
+    await player.isClosed;
+
+    isTopicHighFrequencySpy.mockRestore();
+
+    (console.warn as jest.Mock).mockClear();
+  });
+
   it("should start a new iterator mid-tick when old iterator finishes", async () => {
     const source = new TestSource();
     const player = new IterablePlayer({
@@ -801,6 +935,71 @@ describe("IterablePlayer", () => {
         },
       ],
     ]);
+
+    player.close();
+    await player.isClosed;
+  });
+
+  it("strips unauthorized sampling requests from direct subscriptions", async () => {
+    const source = new TestSource();
+    const player = new IterablePlayer({
+      source,
+      enablePreload: false,
+      sourceId: "test",
+    });
+
+    const messageIteratorSpy = jest.spyOn(source, "messageIterator");
+    player.setSubscriptions([
+      {
+        topic: "foo",
+        samplingRequest: { mode: "latest-per-render-tick" },
+      },
+    ]);
+
+    const store = new PlayerStateStore(4);
+    player.setListener(async (state) => {
+      await store.add(state);
+    });
+    await store.done;
+
+    expect(messageIteratorSpy).toHaveBeenCalledTimes(1);
+    const messageIteratorArgs = messageIteratorSpy.mock.calls[0]?.[0];
+    expect(messageIteratorArgs?.topics.get("foo")).toEqual({ topic: "foo" });
+
+    player.close();
+    await player.isClosed;
+  });
+
+  it("keeps authorized sampling requests from trusted subscriptions", async () => {
+    const source = new TestSource();
+    const player = new IterablePlayer({
+      source,
+      enablePreload: false,
+      sourceId: "test",
+    });
+
+    const messageIteratorSpy = jest.spyOn(source, "messageIterator");
+    player.setSubscriptions([
+      {
+        topic: "foo",
+        samplingRequest: { mode: "latest-per-render-tick" },
+        samplingAuthorized: true,
+      } as InternalSubscribePayload,
+    ]);
+
+    const store = new PlayerStateStore(4);
+    player.setListener(async (state) => {
+      await store.add(state);
+    });
+    await store.done;
+
+    expect(messageIteratorSpy).toHaveBeenCalledTimes(1);
+    const messageIteratorArgs = messageIteratorSpy.mock.calls[0]?.[0];
+    expect(messageIteratorArgs?.topics.get("foo")).toEqual({
+      topic: "foo",
+      samplingRequest: { mode: "latest-per-render-tick" },
+      samplingAuthorized: true,
+    });
 
     player.close();
     await player.isClosed;

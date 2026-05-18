@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -50,6 +50,9 @@ import {
   NO_IMAGE_TOPICS_HUD_ITEM,
   REMOVE_IMAGE_TIMEOUT_MS,
   SUPPORTED_RAW_IMAGE_SCHEMAS,
+  BOTH_TOPICS_DO_NOT_EXIST_HUD_ITEM_ID,
+  IMAGE_TOPIC_DOES_NOT_EXIST_HUD_ITEM_ID,
+  CALIBRATION_TOPIC_DOES_NOT_EXIST_HUD_ITEM_ID,
 } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/ImageMode/constants";
 import {
   ConfigWithDefaults,
@@ -77,11 +80,6 @@ import { downloadFiles } from "@lichtblick/suite-base/util/download";
 import { ImageModeCamera } from "./ImageModeCamera";
 import { IMessageHandler, MessageHandler, MessageRenderState } from "./MessageHandler";
 import { ImageAnnotations } from "./annotations/ImageAnnotations";
-import {
-  BOTH_TOPICS_DO_NOT_EXIST_HUD_ITEM_ID,
-  IMAGE_TOPIC_DOES_NOT_EXIST_HUD_ITEM_ID,
-  CALIBRATION_TOPIC_DOES_NOT_EXIST_HUD_ITEM_ID,
-} from "./constants";
 import type {
   AnyRendererSubscription,
   IRenderer,
@@ -205,6 +203,7 @@ export class ImageMode
       this.dispatchEvent({ type: "hasModifiedViewChanged" });
       this.renderer.queueAnimationFrame();
     });
+
 
     this.renderer.on("topicsChanged", this.#handleTopicsChanged);
     this.#handleTopicsChanged();
@@ -398,6 +397,7 @@ export class ImageMode
       rotation,
       brightness,
       contrast,
+      semanticColormap,
     } = settings;
 
     const imageTopics = filterMap(this.renderer.topics ?? [], (topic) => {
@@ -529,6 +529,12 @@ export class ImageMode
       step: 5,
     };
 
+    fields.semanticColormap = {
+      input: "boolean",
+      label: "Semantic colormap",
+      value: semanticColormap ?? false,
+    };
+
     const imageTopic =
       imageTopicName != undefined ? this.renderer.topicsByName?.get(imageTopicName) : undefined;
     const isRawImageTopic =
@@ -630,6 +636,7 @@ export class ImageMode
       maxValue: config.maxValue,
       brightness: config.brightness,
       contrast: config.contrast,
+      semanticColormap: config.semanticColormap,
     });
     if (config.synchronize !== prevImageModeConfig.synchronize) {
       this.hud.removeGroup(IMAGE_MODE_HUD_GROUP_ID);
@@ -856,7 +863,7 @@ export class ImageMode
     const colorMode =
       config.colorMode === "rgba-fields"
         ? DEFAULT_IMAGE_CONFIG.colorMode
-        : config.colorMode ?? DEFAULT_IMAGE_CONFIG.colorMode;
+        : (config.colorMode ?? DEFAULT_IMAGE_CONFIG.colorMode);
 
     // Ensures that no required fields are left undefined
     // rightmost values are applied last and have the most precedence

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -24,6 +24,7 @@ import { SceneSettings } from "@lichtblick/suite-base/panels/ThreeDeeRender/rend
 import { Urdfs } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/Urdfs";
 import { VelodyneScans } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/VelodyneScans";
 import { PlanningSceneExtension } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/moveit/PlanningSceneExtension";
+import { NvbloxExtension } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/nvblox/NvbloxExtension";
 
 import { IRenderer } from "./IRenderer";
 import { SceneExtension } from "./SceneExtension";
@@ -129,6 +130,9 @@ export const DEFAULT_SCENE_EXTENSION_CONFIG: SceneExtensionConfig = {
         console.log("🔧 SceneExtensionConfig: Initializing PlanningSceneExtension");
         return new PlanningSceneExtension(renderer);
       },
+    },
+    [NvbloxExtension.extensionId]: {
+      init: (renderer: IRenderer) => new NvbloxExtension(renderer),
     },
   },
 };

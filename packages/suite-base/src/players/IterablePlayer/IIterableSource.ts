@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -200,6 +200,8 @@ export interface IIterableSource<MessageType = unknown> {
   ) => IMessageCursor<MessageType>;
 
   getStart?: () => Time | undefined;
+
+  getEnd?: () => Time | undefined;
 
   /**
    * Optional method a data source can implement to cleanup resources. The player will call this

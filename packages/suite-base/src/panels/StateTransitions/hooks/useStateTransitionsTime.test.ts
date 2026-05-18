@@ -1,21 +1,19 @@
 /** @jest-environment jsdom */
 
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 import { renderHook } from "@testing-library/react";
 
 import { Time, toSec } from "@lichtblick/rostime";
 import { useMessagePipelineGetter } from "@lichtblick/suite-base/components/MessagePipeline";
-import { subtractTimes } from "@lichtblick/suite-base/players/UserScriptPlayer/transformerWorker/typescript/userUtils/time";
+import { subtractTimes } from "@lichtblick/suite-base/util/time";
 
 import useStateTransitionsTime from "./useStateTransitionsTime";
 
 jest.mock("@lichtblick/suite-base/components/MessagePipeline");
 jest.mock("@lichtblick/rostime");
-jest.mock(
-  "@lichtblick/suite-base/players/UserScriptPlayer/transformerWorker/typescript/userUtils/time",
-);
+jest.mock("@lichtblick/suite-base/util/time");
 
 describe("useStateTransitionsTime", () => {
   const mockUseMessagePipelineGetter = useMessagePipelineGetter as jest.Mock;

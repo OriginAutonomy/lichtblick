@@ -1,0 +1,21 @@
+# Lichtblick UI
+
+# DOCKER_BUILDKIT=1 docker compose up -d --build    # start command
+
+services:
+  lichtblick:
+    container_name: lichtblick-ui
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: serve
+    image: ${LICHTBLICK_IMAGE:-ghcr.io/originautonomy/lichtblick-ui:v1.19.12}
+    pull_policy: ${PULL_POLICY:-missing}
+    ports:
+      - "8017:8017"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro

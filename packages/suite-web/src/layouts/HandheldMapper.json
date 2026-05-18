@@ -1,0 +1,117 @@
+{
+  "configById": {
+    "Image!2qoi78c": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/evaluatepose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/handheld_mapper/nvblox_node/polycam_overlay"
+      }
+    },
+    "3D!3sstqco": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 12.604988194490458,
+        "phi": 84.79591836734704,
+        "thetaOffset": -39.03061224489888,
+        "targetOffset": [
+          -0.831302817302888,
+          -1.2208540443788383,
+          -2.358689204194727e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "map",
+      "scene": {
+        "backgroundColor": "#b0c2bf",
+        "transforms": {
+          "labelSize": 0.09,
+          "lineWidth": 0,
+          "showLabel": true,
+          "enablePreloading": true,
+          "axisSize": 0.2
+        },
+        "meshUpAxis": "z_up"
+      },
+      "topics": {
+        "/handheld_mapper/nvblox_node/color_layer": {
+          "visible": false
+        },
+        "/handheld_mapper/nvblox_node/dynamic_occupancy_layer": {
+          "visible": false
+        },
+        "/handheld_mapper/nvblox_node/mesh": {
+          "visible": true
+        },
+        "/handheld_mapper/nvblox_node/semantic_layer": {
+          "visible": false
+        },
+        "/handheld_mapper/nvblox_node/block_room_planes": {
+          "visible": true
+        },
+        "/handheld_mapper/nvblox_node/tsdf_layer": {
+          "visible": false
+        }
+      },
+      "layers": {},
+      "imageMode": {}
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": "Image!2qoi78c",
+    "second": "3D!3sstqco",
+    "direction": "row",
+    "splitPercentage": 62
+  }
+}

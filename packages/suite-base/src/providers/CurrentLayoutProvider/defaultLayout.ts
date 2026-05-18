@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -221,6 +221,27 @@ export const defaultLayout: LayoutData =
             "colorMap": "turbo",
             "pointSize": 8,
             "flatColor": "#ff0000ff"
+          },
+          "/monitored_planning_scene": {
+            "visible": true,
+            "showCollisionObjects": true,
+            "collisionObjectColor": "#00cc8880"
+          },
+          "/nvblox_node/mesh": {
+            "visible": true,
+            "frameLocked": true
+          },
+          "/nvblox_node/tsdf_layer": {
+            "visible": false,
+            "frameLocked": true
+          },
+          "/global_mapper/nvblox_node/mesh": {
+            "visible": true,
+            "frameLocked": true
+          },
+          "/global_mapper/nvblox_node/tsdf_layer": {
+            "visible": false,
+            "frameLocked": true
           }
         },
         "publish": {

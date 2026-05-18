@@ -348,6 +348,22 @@
           "visible": false,
           "showCollisionObjects": true,
           "collisionObjectColor": "#ff0000"
+        },
+        "/nvblox_node/mesh": {
+          "visible": true,
+          "frameLocked": true
+        },
+        "/nvblox_node/tsdf_layer": {
+          "visible": false,
+          "frameLocked": true
+        },
+        "/global_mapper/nvblox_node/mesh": {
+          "visible": true,
+          "frameLocked": true
+        },
+        "/global_mapper/nvblox_node/tsdf_layer": {
+          "visible": false,
+          "frameLocked": true
         }
       },
       "publish": {
