@@ -278,7 +278,7 @@ function createExtensionRegistryStore(
       set({
         installedExtensions,
         installedPanels: contributionPoints.panels,
-        installedMessageConverters: contributionPoints.messageConverters,
+        installedMessageConverters: [...(mockMessageConverters ?? []), ...contributionPoints.messageConverters],
         installedTopicAliasFunctions: contributionPoints.topicAliasFunctions,
         installedCameraModels: contributionPoints.cameraModels,
         panelSettings: contributionPoints.panelSettings,
