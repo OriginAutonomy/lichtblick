@@ -18,10 +18,10 @@ export function loadCloudiniWasm(): Promise<void> {
   return wasmLoadingPromise;
 }
 
-export function convertCompressedPointCloud(cloud: CompressedPointCloud): PointCloud {
+export function convertCompressedPointCloud(cloud: CompressedPointCloud): PointCloud | undefined {
   if (!wasmModule) {
     void loadCloudiniWasm();
-    throw new Error("Cloudini WASM module is still loading. Please try again.");
+    return undefined;
   }
 
   const decodedMsg: PointCloud = {
