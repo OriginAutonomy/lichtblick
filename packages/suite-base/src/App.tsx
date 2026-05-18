@@ -43,6 +43,7 @@ import ExtensionMarketplaceProvider from "./providers/ExtensionMarketplaceProvid
 import PanelCatalogProvider from "./providers/PanelCatalogProvider";
 import { LaunchPreference } from "./screens/LaunchPreference";
 import { IExtensionLoader } from "./services/extension/IExtensionLoader";
+import { builtinMessageConverters } from "./services/cloudini/builtinMessageConverters";
 
 export type AppProps = CustomWindowControlsProps & {
   appConfiguration: IAppConfiguration;
@@ -90,7 +91,7 @@ export function App(props: AppProps): React.JSX.Element {
     <TimelineInteractionStateProvider />,
     <UserScriptStateProvider />,
     <ExtensionMarketplaceProvider />,
-    <ExtensionCatalogProvider loaders={extensionLoaders} />,
+    <ExtensionCatalogProvider loaders={extensionLoaders} mockMessageConverters={builtinMessageConverters} />,
     <PlayerManager playerSources={dataSources} />,
     <EventsProvider />,
     /* eslint-enable react/jsx-key */
