@@ -37,4 +37,14 @@ COPY --from=build --chown=node:node /src/web/.webpack ./
 USER node
 EXPOSE 8017
 
-ENTRYPOINT ["serve", "-s", ".", "-l", "8017", "--no-clipboard", "--cors"]
+RUN printf '#!/bin/sh\n\
+mkdir -p /lichtblick\n\
+touch /lichtblick/default-layout.json\n\
+index_html=$(cat index.html)\n\
+replace_pattern='"'"'/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/'"'"'\n\
+replace_value=$(cat /lichtblick/default-layout.json)\n\
+echo "${index_html/"$replace_pattern"/"$replace_value"}" > index.html\n\
+exec "$@"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
+CMD ["caddy", "file-server", "--listen", ":8017"]
