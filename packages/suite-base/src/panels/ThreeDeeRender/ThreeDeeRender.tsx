@@ -1033,9 +1033,11 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
             };
             const json = JSON.stringify(bridgePayload);
             if (json != undefined) {
-              (window as { LichtblickBridge?: { onEvaluatePose: (json: string) => void } }).LichtblickBridge?.onEvaluatePose(
-                json,
-              );
+              (
+                window as {
+                  LichtblickBridge?: { onEvaluatePose: (json: string) => void };
+                }
+              ).LichtblickBridge?.onEvaluatePose(json);
             }
           } else {
             const datatypes =
