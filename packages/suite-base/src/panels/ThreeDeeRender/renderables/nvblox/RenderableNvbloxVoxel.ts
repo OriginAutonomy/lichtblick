@@ -12,6 +12,7 @@ import { RosValue } from "@lichtblick/suite-base/players/types";
 import { VoxelBlockLayer } from "@lichtblick/suite-base/types/NvbloxMessages";
 
 import type { LayerSettingsNvblox } from "./NvbloxExtension";
+import { SRGBToLinear } from "../../color";
 import type { IRenderer } from "../../IRenderer";
 import { BaseUserData, Renderable } from "../../Renderable";
 
@@ -200,8 +201,8 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
         matrix.makeTranslation(center.x, center.y, center.z);
         instancedMesh.setMatrixAt(i, matrix);
 
-        // Set color
-        color.setRGB(voxelColor.r, voxelColor.g, voxelColor.b);
+        // Set color (convert sRGB → linear for Three.js rendering pipeline)
+        color.setRGB(SRGBToLinear(voxelColor.r), SRGBToLinear(voxelColor.g), SRGBToLinear(voxelColor.b));
         instancedMesh.setColorAt(i, color);
       }
     }

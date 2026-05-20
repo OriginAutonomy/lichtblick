@@ -12,6 +12,7 @@ import { RosValue } from "@lichtblick/suite-base/players/types";
 import { Mesh } from "@lichtblick/suite-base/types/NvbloxMessages";
 
 import type { LayerSettingsNvblox } from "./NvbloxExtension";
+import { SRGBToLinear } from "../../color";
 import type { IRenderer } from "../../IRenderer";
 import { BaseUserData, Renderable } from "../../Renderable";
 
@@ -198,14 +199,16 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
       geometry.setAttribute("normal", normalAttr);
     }
 
-    // Set colors if available
-    if (block.colors.length === block.vertices.length) {
+    // Set colors if available — must match vertex count for vertexColors to work
+    const hasVertexColors =
+      block.colors.length > 0 && block.colors.length === block.vertices.length;
+    if (hasVertexColors) {
       const colors = new Float32Array(block.colors.length * 3);
       for (let i = 0; i < block.colors.length; i++) {
         const c = block.colors[i]!;
-        colors[i * 3] = c.r;
-        colors[i * 3 + 1] = c.g;
-        colors[i * 3 + 2] = c.b;
+        colors[i * 3] = SRGBToLinear(c.r);
+        colors[i * 3 + 1] = SRGBToLinear(c.g);
+        colors[i * 3 + 2] = SRGBToLinear(c.b);
       }
       const colorAttr = new THREE.BufferAttribute(colors, 3);
       colorAttr.needsUpdate = true;
@@ -227,12 +230,11 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();
 
-    const hasColors = block.colors.length > 0;
     const material = new THREE.MeshPhongMaterial({
-      vertexColors: hasColors,
+      vertexColors: hasVertexColors,
       side: THREE.DoubleSide,
       flatShading: false,
-      emissive: hasColors ? 0x222222 : 0x888888,
+      emissive: hasVertexColors ? 0x222222 : 0x888888,
       shininess: 30,
     });
     material.needsUpdate = true;
