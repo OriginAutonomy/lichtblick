@@ -174,8 +174,8 @@ export type RendererConfig = {
     poseEstimateYDeviation: number;
     /** The theta standard deviation to publish with poses */
     poseEstimateThetaDeviation: number;
-    /** Bridge initial pose to Android via JS interface instead of publishing to ROS topic */
-    bridgeInitialPose?: boolean;
+    /** Bridge evaluate pose to Android via JS interface instead of publishing to ROS topic */
+    bridgeEvaluatePose?: boolean;
   };
   /** frameId -> settings */
   transforms: Record<string, Partial<LayerSettingsTransform> | undefined>;

@@ -5,8 +5,8 @@ import { DEFAULT_PUBLISH_SETTINGS, PublishSettings } from "./PublishSettings";
 
 describe("PublishSettings", () => {
   describe("DEFAULT_PUBLISH_SETTINGS", () => {
-    it("defaults bridgeInitialPose to false", () => {
-      expect(DEFAULT_PUBLISH_SETTINGS.bridgeInitialPose).toBe(false);
+    it("defaults bridgeEvaluatePose to false", () => {
+      expect(DEFAULT_PUBLISH_SETTINGS.bridgeEvaluatePose).toBe(false);
     });
   });
 
@@ -49,39 +49,39 @@ describe("PublishSettings", () => {
       mockRenderer = createMockRenderer();
     });
 
-    it("includes bridgeInitialPose toggle in settings", () => {
+    it("includes bridgeEvaluatePose toggle in settings", () => {
       const settings = new PublishSettings(mockRenderer as any);
       const nodes = settings.settingsNodes();
 
       const publishNode = nodes.find((n) => n.path[0] === "publish");
       expect(publishNode).toBeDefined();
-      expect(publishNode!.node.fields!.bridgeInitialPose).toMatchObject({
-        label: "Bridge initial pose to Android",
+      expect(publishNode!.node.fields!.bridgeEvaluatePose).toMatchObject({
+        label: "Bridge evaluate pose to Android",
         input: "boolean",
         value: false,
       });
     });
 
-    it("reflects bridgeInitialPose=true in settings when configured", () => {
+    it("reflects bridgeEvaluatePose=true in settings when configured", () => {
       mockRenderer = createMockRenderer({
         ...DEFAULT_PUBLISH_SETTINGS,
-        bridgeInitialPose: true,
+        bridgeEvaluatePose: true,
       });
       const settings = new PublishSettings(mockRenderer as any);
       const nodes = settings.settingsNodes();
 
       const publishNode = nodes.find((n) => n.path[0] === "publish");
-      expect(publishNode!.node.fields!.bridgeInitialPose).toMatchObject({
+      expect(publishNode!.node.fields!.bridgeEvaluatePose).toMatchObject({
         value: true,
       });
     });
 
-    it("handles bridgeInitialPose settings action", () => {
+    it("handles bridgeEvaluatePose settings action", () => {
       const settings = new PublishSettings(mockRenderer as any);
       settings.handleSettingsAction({
         action: "update",
         payload: {
-          path: ["publish", "bridgeInitialPose"],
+          path: ["publish", "bridgeEvaluatePose"],
           input: "boolean",
           value: true,
         },
