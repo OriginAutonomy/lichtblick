@@ -12,6 +12,7 @@ import { RosValue } from "@lichtblick/suite-base/players/types";
 import { VoxelBlockLayer } from "@lichtblick/suite-base/types/NvbloxMessages";
 
 import type { LayerSettingsNvblox } from "./NvbloxExtension";
+import { SRGBToLinear } from "../../color";
 import type { IRenderer } from "../../IRenderer";
 import { BaseUserData, Renderable } from "../../Renderable";
 
@@ -177,10 +178,12 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
     }
 
     // Create instanced mesh for voxels
+    const hasVertexColors =
+      block.colors.length > 0 && block.colors.length === block.centers.length;
     const geometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
     const material = new THREE.MeshPhongMaterial({
-      vertexColors: true,
-      emissive: 0x222222,
+      vertexColors: hasVertexColors,
+      emissive: hasVertexColors ? 0x222222 : 0x888888,
       shininess: 30,
     });
 
@@ -200,8 +203,8 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
         matrix.makeTranslation(center.x, center.y, center.z);
         instancedMesh.setMatrixAt(i, matrix);
 
-        // Set color
-        color.setRGB(voxelColor.r, voxelColor.g, voxelColor.b);
+        // Set color (convert sRGB → linear for Three.js rendering pipeline)
+        color.setRGB(SRGBToLinear(voxelColor.r), SRGBToLinear(voxelColor.g), SRGBToLinear(voxelColor.b));
         instancedMesh.setColorAt(i, color);
       }
     }
