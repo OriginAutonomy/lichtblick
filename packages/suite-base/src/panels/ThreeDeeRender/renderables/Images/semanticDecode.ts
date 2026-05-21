@@ -1,71 +1,74 @@
 // SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
-// Isaac ROS / Nvblox semantic segmentation 26-class color palette.
+// Origin semantic segmentation 28-class color palette (eomt_semantic_fp16.trt).
 // R channel of rgba8 image = class ID. This LUT maps class ID → display color.
-// Source: nvblox semantic_segmentation.yaml
 
-// [R, G, B, A] per class, 26 entries
+// [R, G, B, A] per class, 28 entries
 // prettier-ignore
 export const SEMANTIC_LUT = new Uint8Array([
-    0,   0,   0, 255,  //  0: Unlabeled
-   70,  70,  70, 255,  //  1: Building
-  190, 153, 153, 255,  //  2: Fences
-   72,   0,  90, 255,  //  3: Other
-  220,  20,  60, 255,  //  4: Pedestrian
-  153, 153, 153, 255,  //  5: Pole
-  157, 234,  50, 255,  //  6: Road Line
-  128,  64, 128, 255,  //  7: Road
-  244,  35, 232, 255,  //  8: Sidewalk
-  107, 142,  35, 255,  //  9: Vegetation
-    0,   0, 255, 255,  // 10: Car
-  102, 102, 156, 255,  // 11: Wall
-  220, 220,   0, 255,  // 12: Traffic Sign
-   70, 130, 180, 255,  // 13: Sky
-    0,   0,  70, 255,  // 14: Ground
-  150, 100, 100, 255,  // 15: Bridge
-  230, 150, 140, 255,  // 16: Rail Track
-  180, 165, 180, 255,  // 17: Guard Rail
-    0,  60, 100, 255,  // 18: Traffic Light
-  110,  70,  80, 255,  // 19: Static
-   81,   0,  81, 255,  // 20: Dynamic
-  111,  74,   0, 255,  // 21: Water
-  250, 170, 160, 255,  // 22: Terrain
-  230, 150, 140, 255,  // 23: Person on Bike/Cycle
-   50, 120, 170, 255,  // 24: Truck
-  180,   0,   0, 255,  // 25: Bus
+   31, 119, 180, 255,  //  0: Drywall
+  174, 199, 232, 255,  //  1: Ceiling Drywall
+  255, 127,  14, 255,  //  2: Floor
+  255, 187, 120, 255,  //  3: Compounded Vertical Screws
+   44, 160,  44, 255,  //  4: Compounded Circular Screws
+  152, 223, 138, 255,  //  5: Ceiling Vertical Screws
+  214,  39,  40, 255,  //  6: Ceiling Circular Screws
+  255, 152, 150, 255,  //  7: L2 Vertical Seam
+  148, 103, 189, 255,  //  8: L2 Horizontal Seam
+  197, 176, 213, 255,  //  9: L2 Edge Horizontal Seam
+  140,  86,  75, 255,  // 10: L2 Edge Vertical Seam
+  196, 156, 148, 255,  // 11: L4 Vertical Seam
+  227, 119, 194, 255,  // 12: L4 Horizontal Seam
+  247, 182, 210, 255,  // 13: L4 Edge Horizontal Seam
+  127, 127, 127, 255,  // 14: L4 Edge Vertical Seam
+  199, 199, 199, 255,  // 15: Ceiling L2 Seam
+  188, 189,  34, 255,  // 16: Ceiling L4 Seam
+  219, 219, 141, 255,  // 17: Electrical Outlet
+   23, 190, 207, 255,  // 18: L4 Electrical Cutout
+  158, 218, 229, 255,  // 19: Ceiling Electrical Outlet
+  216, 140,   0, 255,  // 20: L5 Sprayed
+    0, 153, 127, 255,  // 21: L5 Ceiling
+  140,   0, 140, 255,  // 22: Frame for Window
+  242, 242,   0, 255,  // 23: Frame for Door
+    0,   0, 140, 255,  // 24: Outlier
+  140,  76,   0, 255,  // 25: Robot
+    0, 102,   0, 255,  // 26: Person
+    0,   0,   0, 255,  // 27: Background
 ]);
 
 export const SEMANTIC_CLASS_NAMES: readonly string[] = [
-  "Unlabeled",
-  "Building",
-  "Fences",
-  "Other",
-  "Pedestrian",
-  "Pole",
-  "Road Line",
-  "Road",
-  "Sidewalk",
-  "Vegetation",
-  "Car",
-  "Wall",
-  "Traffic Sign",
-  "Sky",
-  "Ground",
-  "Bridge",
-  "Rail Track",
-  "Guard Rail",
-  "Traffic Light",
-  "Static",
-  "Dynamic",
-  "Water",
-  "Terrain",
-  "Person on Bike/Cycle",
-  "Truck",
-  "Bus",
+  "Drywall",
+  "Ceiling Drywall",
+  "Floor",
+  "Compounded Vertical Screws",
+  "Compounded Circular Screws",
+  "Ceiling Vertical Screws",
+  "Ceiling Circular Screws",
+  "L2 Vertical Seam",
+  "L2 Horizontal Seam",
+  "L2 Edge Horizontal Seam",
+  "L2 Edge Vertical Seam",
+  "L4 Vertical Seam",
+  "L4 Horizontal Seam",
+  "L4 Edge Horizontal Seam",
+  "L4 Edge Vertical Seam",
+  "Ceiling L2 Seam",
+  "Ceiling L4 Seam",
+  "Electrical Outlet",
+  "L4 Electrical Cutout",
+  "Ceiling Electrical Outlet",
+  "L5 Sprayed",
+  "L5 Ceiling",
+  "Frame for Window",
+  "Frame for Door",
+  "Outlier",
+  "Robot",
+  "Person",
+  "Background",
 ];
 
-const NUM_CLASSES = 26;
+const NUM_CLASSES = 28;
 
 export function colorizeSemanticImage(
   data: Uint8ClampedArray,

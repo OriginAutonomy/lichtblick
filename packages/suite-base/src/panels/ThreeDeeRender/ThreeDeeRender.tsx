@@ -948,13 +948,17 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
       };
     }) => {
       const frameId = "map";
-      if (!context.publish) {
-        log.error("Data source does not support publishing");
-        return;
-      }
-      if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-        log.warn("Publishing is only supported in ros1 and ros2");
-        return;
+      const useBridge =
+        poseInputMode === "evaluate" && config.publish.bridgeEvaluatePose === true;
+      if (!useBridge) {
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
+          log.warn("Publishing is only supported in ros1 and ros2");
+          return;
+        }
       }
 
       try {
@@ -975,7 +979,7 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
           const datatypes =
             context.dataSourceProfile === "ros2" ? PublishRos2Datatypes : PublishRos1Datatypes;
           context.advertise?.("/goal_pose", "geometry_msgs/PoseStamped", { datatypes });
-          context.publish("/goal_pose", goalMessage);
+          context.publish!("/goal_pose", goalMessage);
         } else if (poseInputMode === "initial") {
           // Publish initial pose
           const initialMessage = {
@@ -998,7 +1002,7 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
           context.advertise?.("/initialpose", "geometry_msgs/PoseWithCovarianceStamped", {
             datatypes,
           });
-          context.publish("/initialpose", initialMessage);
+          context.publish!("/initialpose", initialMessage);
         } else {
           // Publish evaluate pose
           const evaluateMessage = {
@@ -1016,12 +1020,33 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
             },
           };
 
-          const datatypes =
-            context.dataSourceProfile === "ros2" ? PublishRos2Datatypes : PublishRos1Datatypes;
-          context.advertise?.("/evaluatepose", "geometry_msgs/PoseWithCovarianceStamped", {
-            datatypes,
-          });
-          context.publish("/evaluatepose", evaluateMessage);
+          if (config.publish.bridgeEvaluatePose === true) {
+            // Send to Android via JS bridge instead of publishing to ROS topic.
+            // The Android side forwards this verbatim to the ROS2 backend, which
+            // expects ROS2 IDL field naming — `nanosec`, not Foxglove's `nsec`.
+            const bridgePayload = {
+              ...evaluateMessage,
+              header: {
+                ...evaluateMessage.header,
+                stamp: { sec, nanosec: nsec },
+              },
+            };
+            const json = JSON.stringify(bridgePayload);
+            if (json != undefined) {
+              (
+                window as {
+                  LichtblickBridge?: { onEvaluatePose: (json: string) => void };
+                }
+              ).LichtblickBridge?.onEvaluatePose(json);
+            }
+          } else {
+            const datatypes =
+              context.dataSourceProfile === "ros2" ? PublishRos2Datatypes : PublishRos1Datatypes;
+            context.advertise?.("/evaluatepose", "geometry_msgs/PoseWithCovarianceStamped", {
+              datatypes,
+            });
+            context.publish!("/evaluatepose", evaluateMessage);
+          }
         }
       } catch (error) {
         log.info(error);
@@ -1044,7 +1069,7 @@ export function ThreeDeeRender(props: Readonly<ThreeDeeRenderProps>): React.JSX.
       renderer?.poseInputTool.removeEventListener("foxglove.pose-input-submit", onPoseInputSubmit);
       renderer?.poseInputTool.removeEventListener("foxglove.pose-input-end", onPoseInputEnd);
     };
-  }, [context, renderer?.poseInputTool, poseInputMode]);
+  }, [context, renderer?.poseInputTool, poseInputMode, config.publish.bridgeEvaluatePose]);
 
   const onClickPublish = useCallback(() => {
     if (publishActive) {

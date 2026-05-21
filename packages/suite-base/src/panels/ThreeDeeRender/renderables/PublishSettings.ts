@@ -23,6 +23,7 @@ export const DEFAULT_PUBLISH_SETTINGS: RendererConfig["publish"] = {
   poseEstimateXDeviation: 0.5,
   poseEstimateYDeviation: 0.5,
   poseEstimateThetaDeviation: _.round(Math.PI / 12, 8),
+  bridgeEvaluatePose: false,
 };
 
 export class PublishSettings extends SceneExtension {
@@ -99,6 +100,12 @@ export class PublishSettings extends SceneExtension {
                 help: t("threeDee:thetaDeviationHelp"),
               },
             }),
+            bridgeEvaluatePose: {
+              label: "Bridge evaluate pose to Android",
+              input: "boolean",
+              value: publish.bridgeEvaluatePose ?? false,
+              help: "Send evaluate pose data to Android via JS bridge instead of publishing to ROS topic",
+            },
           },
           defaultExpansionState: "collapsed",
           handler,
