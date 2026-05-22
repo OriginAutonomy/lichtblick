@@ -3546,6 +3546,7 @@ __metadata:
     fork-ts-checker-webpack-plugin: 9.0.2
     fuzzysort: 3.1.0
     fzf: 0.5.2
+    fzstd: ^0.1.1
     geojson: 0.5.0
     gl-matrix: 3.4.3
     hammerjs: 2.0.8
@@ -12448,6 +12449,13 @@ __metadata:
   version: 0.5.2
   resolution: "fzf@npm:0.5.2"
   checksum: d7064ea9a2482b656c2852e65af49c3fc86e3cd866d64e8eb3940ca1f193db769b7c2e77c5df0583af4af8875f63ee6aa3cd49d42d0af786a6bd7d92ec929619
+  languageName: node
+  linkType: hard
+
+"fzstd@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "fzstd@npm:0.1.1"
+  checksum: a06cc21096bbec787d99c4b1b9998fd6883c2e4e6550633956738992d6e49f94f027962c2d1a5f8d18f3b27ad630bb7d6b51dd3121dded8f9c8c854ff553a79a
   languageName: node
   linkType: hard
 

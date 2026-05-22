@@ -198,5 +198,8 @@
     "typescript": {
       "optional": true
     }
+  },
+  "dependencies": {
+    "fzstd": "^0.1.1"
   }
 }
