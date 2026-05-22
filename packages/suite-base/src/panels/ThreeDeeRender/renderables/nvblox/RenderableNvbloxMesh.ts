@@ -244,6 +244,12 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
       geometry.setIndex(null);
     }
 
+    if (indexCount > 0) {
+      geometry.setDrawRange(0, indexCount);
+    } else {
+      geometry.setDrawRange(0, vertexCount);
+    }
+
     if (!hasNormals) {
       geometry.computeVertexNormals();
     }

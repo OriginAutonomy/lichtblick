@@ -226,7 +226,7 @@ export class NvbloxExtension extends SceneExtension<RenderableNvbloxMesh | Rende
           const fixedFrame = tree.frame(fixedFrameId);
           const allFrames = Array.from(tree.frames().keys());
           // eslint-disable-next-line no-console
-          console.warn(
+          console.debug(
             `[Nvblox] Transform lookup failed for topic "${renderable.userData.topic}"`,
             {
               messageFrameId: frameId,
