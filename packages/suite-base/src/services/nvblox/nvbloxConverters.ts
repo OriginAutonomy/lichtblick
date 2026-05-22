@@ -4,7 +4,10 @@
 // Ported from nvblox_foxglove extension (NVIDIA Isaac ROS nvblox)
 // Converts nvblox_msgs/msg/Mesh and VoxelBlockLayer to foxglove.SceneUpdate
 
-import type { Color, Duration, Mesh, VoxelBlockLayer } from "./types";
+import type { Mesh, VoxelBlockLayer } from "../../types/NvbloxMessages";
+
+type Color = { r: number; g: number; b: number; a: number };
+type Duration = { sec: number; nsec: number };
 
 type Pose = {
   position: { x: number; y: number; z: number };
@@ -65,7 +68,7 @@ export function convertVoxelBlockLayer(layer: VoxelBlockLayer): SceneUpdate {
   const entities: SceneEntity[] = [];
   const deletions: SceneEntityDeletion[] = [];
 
-  const voxel_size = layer.block_size_m / 8;
+  const voxel_size = layer.voxel_size_m;
 
   for (let i_block = 0; i_block < layer.blocks.length; ++i_block) {
     const block = layer.blocks[i_block];

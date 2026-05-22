@@ -11,9 +11,13 @@ let wasmLoadingPromise: Promise<void> | undefined;
 
 export function loadCloudiniWasm(): Promise<void> {
   if (!wasmLoadingPromise) {
-    wasmLoadingPromise = CloudiniModule().then((module: CloudiniWasmModule) => {
-      wasmModule = module;
-    });
+    wasmLoadingPromise = CloudiniModule()
+      .then((module: CloudiniWasmModule) => {
+        wasmModule = module;
+      })
+      .catch(() => {
+        wasmLoadingPromise = undefined;
+      });
   }
   return wasmLoadingPromise;
 }
@@ -49,13 +53,6 @@ export function convertCompressedPointCloud(cloud: CompressedPointCloud): PointC
 
   try {
     const bufferSize = data.byteLength;
-
-    if (wasmModule.HEAPU8) {
-      const maxAllowedSize = wasmModule.HEAPU8.length / 4;
-      if (bufferSize > maxAllowedSize) {
-        throw new Error(`Message too large (${bufferSize} bytes > ${maxAllowedSize} bytes)`);
-      }
-    }
 
     inputDataPtr = wasmModule._malloc(bufferSize);
     if (!inputDataPtr) {
