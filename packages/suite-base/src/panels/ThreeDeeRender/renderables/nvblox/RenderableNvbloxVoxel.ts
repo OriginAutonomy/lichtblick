@@ -178,12 +178,10 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
     }
 
     // Create instanced mesh for voxels
-    const hasVertexColors =
-      block.colors.length > 0 && block.colors.length === block.centers.length;
+    const hasColors = block.colors.length > 0 && block.colors.length === block.centers.length;
     const geometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
     const material = new THREE.MeshPhongMaterial({
-      vertexColors: hasVertexColors,
-      emissive: hasVertexColors ? 0x222222 : 0x888888,
+      emissive: hasColors ? 0x222222 : 0x888888,
       shininess: 30,
     });
 
@@ -196,16 +194,17 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
 
     for (let i = 0; i < voxelCount; i++) {
       const center = block.centers[i];
-      const voxelColor = block.colors[i];
+      const voxelColor = hasColors ? block.colors[i] : undefined;
 
-      if (center && voxelColor) {
+      if (center) {
         // Set position
         matrix.makeTranslation(center.x, center.y, center.z);
         instancedMesh.setMatrixAt(i, matrix);
 
-        // Set color (convert sRGB → linear for Three.js rendering pipeline)
-        color.setRGB(SRGBToLinear(voxelColor.r), SRGBToLinear(voxelColor.g), SRGBToLinear(voxelColor.b));
-        instancedMesh.setColorAt(i, color);
+        if (voxelColor) {
+          color.setRGB(SRGBToLinear(voxelColor.r), SRGBToLinear(voxelColor.g), SRGBToLinear(voxelColor.b));
+          instancedMesh.setColorAt(i, color);
+        }
       }
     }
 
