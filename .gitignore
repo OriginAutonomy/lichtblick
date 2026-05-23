@@ -1,4 +1,5 @@
 *.log
+*.mcap
 *.tsbuildinfo
 .DS_Store
 .eslintcache
