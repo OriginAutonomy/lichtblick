@@ -13,9 +13,9 @@ type Props = {
   config: WebRTCCameraConfig;
 };
 
-export function WebRTCCamera({ config }: Props): React.JSX.Element {
+export function WebRTCCamera({ config: _config }: Props): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  console.log("WebRTCCamera config:", config)
+  console.log("WebRTCCamera config:", _config)
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
   const [status, setStatus] = useState<string>("Idle");

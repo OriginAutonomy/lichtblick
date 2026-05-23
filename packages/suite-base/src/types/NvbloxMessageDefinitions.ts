@@ -83,4 +83,40 @@ export const nvbloxMessageDefinitions: Record<string, MessageDefinition> = {
       { name: "colors", type: "std_msgs/ColorRGBA", isComplex: true, isArray: true },
     ],
   },
+
+  "compressed_nvblox_msgs/msg/CompressedNvbloxMesh": {
+    name: "compressed_nvblox_msgs/msg/CompressedNvbloxMesh",
+    definitions: [
+      { name: "header", type: "std_msgs/Header", isComplex: true, isArray: false },
+      { name: "block_size_m", type: "float32", isComplex: false, isArray: false },
+      { name: "block_indices", type: "nvblox_msgs/Index3D", isComplex: true, isArray: true },
+      { name: "clear", type: "bool", isComplex: false, isArray: false },
+      { name: "format", type: "string", isComplex: false, isArray: false },
+      { name: "num_blocks", type: "uint32", isComplex: false, isArray: false },
+      { name: "block_vertex_counts", type: "uint32", isComplex: false, isArray: true },
+      { name: "block_triangle_counts", type: "uint32", isComplex: false, isArray: true },
+      { name: "block_has_normals", type: "uint32", isComplex: false, isArray: true },
+      { name: "block_has_colors", type: "uint32", isComplex: false, isArray: true },
+      { name: "block_byte_sizes", type: "uint32", isComplex: false, isArray: true },
+      { name: "compressed_data", type: "uint8", isComplex: false, isArray: true },
+    ],
+  },
+
+  "compressed_nvblox_msgs/msg/CompressedNvbloxVoxelBlockLayer": {
+    name: "compressed_nvblox_msgs/msg/CompressedNvbloxVoxelBlockLayer",
+    definitions: [
+      { name: "header", type: "std_msgs/Header", isComplex: true, isArray: false },
+      { name: "block_size_m", type: "float32", isComplex: false, isArray: false },
+      { name: "voxel_size_m", type: "float32", isComplex: false, isArray: false },
+      { name: "layer_type", type: "int32", isComplex: false, isArray: false },
+      { name: "block_indices", type: "nvblox_msgs/Index3D", isComplex: true, isArray: true },
+      { name: "clear", type: "bool", isComplex: false, isArray: false },
+      { name: "format", type: "string", isComplex: false, isArray: false },
+      { name: "num_blocks", type: "uint32", isComplex: false, isArray: false },
+      { name: "block_voxel_counts", type: "uint32", isComplex: false, isArray: true },
+      { name: "block_has_colors", type: "uint32", isComplex: false, isArray: true },
+      { name: "block_byte_sizes", type: "uint32", isComplex: false, isArray: true },
+      { name: "compressed_data", type: "uint8", isComplex: false, isArray: true },
+    ],
+  },
 };

@@ -36,6 +36,7 @@ import ExtensionCatalogProvider from "./providers/ExtensionCatalogProvider/Exten
 import ExtensionMarketplaceProvider from "./providers/ExtensionMarketplaceProvider";
 import PanelCatalogProvider from "./providers/PanelCatalogProvider";
 import { LaunchPreference } from "./screens/LaunchPreference";
+import { builtinMessageConverters } from "./services/cloudini/builtinMessageConverters";
 
 // Suppress context menu for the entire app except on inputs & textareas.
 function contextMenuHandler(event: MouseEvent) {
@@ -66,7 +67,7 @@ export function StudioApp(): React.JSX.Element {
     /* eslint-disable react/jsx-key */
     <TimelineInteractionStateProvider />,
     <ExtensionMarketplaceProvider />,
-    <ExtensionCatalogProvider loaders={extensionLoaders} />,
+    <ExtensionCatalogProvider loaders={extensionLoaders} mockMessageConverters={builtinMessageConverters} />,
     <UserScriptStateProvider />,
     <PlayerManager playerSources={dataSources} />,
     <EventsProvider />,
