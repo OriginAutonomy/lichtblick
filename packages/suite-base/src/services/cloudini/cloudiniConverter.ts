@@ -9,17 +9,15 @@ const CloudiniModule = require("./cloudini_wasm_single.js") as () => Promise<Clo
 let wasmModule: CloudiniWasmModule | undefined;
 let wasmLoadingPromise: Promise<void> | undefined;
 
-export function loadCloudiniWasm(): Promise<void> {
-  if (!wasmLoadingPromise) {
-    wasmLoadingPromise = CloudiniModule()
-      .then((module: CloudiniWasmModule) => {
-        wasmModule = module;
-      })
-      .catch(() => {
-        wasmLoadingPromise = undefined;
-      });
-  }
-  return wasmLoadingPromise;
+export async function loadCloudiniWasm(): Promise<void> {
+  wasmLoadingPromise ??= CloudiniModule()
+    .then((module: CloudiniWasmModule) => {
+      wasmModule = module;
+    })
+    .catch(() => {
+      wasmLoadingPromise = undefined;
+    });
+  await wasmLoadingPromise;
 }
 
 export function convertCompressedPointCloud(cloud: CompressedPointCloud): PointCloud | undefined {
@@ -54,8 +52,9 @@ export function convertCompressedPointCloud(cloud: CompressedPointCloud): PointC
   try {
     const bufferSize = data.byteLength;
 
+    // eslint-disable-next-line no-underscore-dangle
     inputDataPtr = wasmModule._malloc(bufferSize);
-    if (!inputDataPtr) {
+    if (inputDataPtr === 0) {
       throw new Error("Failed to allocate memory for input data");
     }
 
@@ -64,11 +63,13 @@ export function convertCompressedPointCloud(cloud: CompressedPointCloud): PointC
 
     const decompressedSize = cloud.height * cloud.width * cloud.point_step;
 
+    // eslint-disable-next-line no-underscore-dangle
     outputDataPtr = wasmModule._malloc(decompressedSize);
-    if (!outputDataPtr) {
+    if (outputDataPtr === 0) {
       throw new Error("Failed to allocate memory for output data");
     }
 
+    // eslint-disable-next-line no-underscore-dangle
     const actualSize = wasmModule._cldn_DecodeCompressedData(
       inputDataPtr,
       bufferSize,
@@ -81,10 +82,12 @@ export function convertCompressedPointCloud(cloud: CompressedPointCloud): PointC
     const decodedData = new Uint8Array(wasmModule.HEAPU8.buffer, outputDataPtr, actualSize);
     decodedMsg.data = new Uint8Array(decodedData);
   } finally {
-    if (inputDataPtr) {
+    if (inputDataPtr != null && inputDataPtr !== 0) {
+      // eslint-disable-next-line no-underscore-dangle
       wasmModule._free(inputDataPtr);
     }
-    if (outputDataPtr) {
+    if (outputDataPtr != null && outputDataPtr !== 0) {
+      // eslint-disable-next-line no-underscore-dangle
       wasmModule._free(outputDataPtr);
     }
   }

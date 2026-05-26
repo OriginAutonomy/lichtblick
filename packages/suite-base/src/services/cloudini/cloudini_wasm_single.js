@@ -1,3 +1,6 @@
+/* eslint-disable */
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-License-Identifier: MPL-2.0
 
 var CloudiniModule = (() => {
   var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;

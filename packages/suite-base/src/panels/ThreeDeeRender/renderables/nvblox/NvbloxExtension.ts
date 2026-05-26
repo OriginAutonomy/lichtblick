@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -16,8 +16,8 @@ import { SceneExtension, PartialMessageEvent } from "../../SceneExtension";
 import { SettingsTreeEntry } from "../../SettingsManager";
 import { BaseSettings } from "../../settings";
 import { topicIsConvertibleToSchema } from "../../topicIsConvertibleToSchema";
-import { MISSING_TRANSFORM, missingTransformMessage } from "../transforms";
 import { updatePose } from "../../updatePose";
+import { MISSING_TRANSFORM, missingTransformMessage } from "../transforms";
 
 export type LayerSettingsNvblox = BaseSettings & {
   showMesh: boolean;
@@ -225,7 +225,6 @@ export class NvbloxExtension extends SceneExtension<RenderableNvbloxMesh | Rende
           const renderFrame = tree.frame(renderFrameId);
           const fixedFrame = tree.frame(fixedFrameId);
           const allFrames = Array.from(tree.frames().keys());
-          // eslint-disable-next-line no-console
           console.debug(
             `[Nvblox] Transform lookup failed for topic "${renderable.userData.topic}"`,
             {

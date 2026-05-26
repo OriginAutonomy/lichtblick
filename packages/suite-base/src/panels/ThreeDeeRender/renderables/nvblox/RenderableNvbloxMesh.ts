@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -12,9 +12,9 @@ import { RosValue } from "@lichtblick/suite-base/players/types";
 import { Mesh } from "@lichtblick/suite-base/types/NvbloxMessages";
 
 import type { LayerSettingsNvblox } from "./NvbloxExtension";
-import { SRGBToLinear } from "../../color";
 import type { IRenderer } from "../../IRenderer";
 import { BaseUserData, Renderable } from "../../Renderable";
+import { SRGBToLinear } from "../../color";
 
 export type NvbloxMeshUserData = BaseUserData & {
   topic: string;
@@ -165,8 +165,7 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
     let material: THREE.MeshPhongMaterial;
 
     const existingMaterial = meshObject?.material as THREE.MeshPhongMaterial | undefined;
-    const materialCompatible =
-      existingMaterial != undefined && existingMaterial.vertexColors === hasVertexColors;
+    const materialCompatible = existingMaterial?.vertexColors === hasVertexColors;
 
     if (meshObject && materialCompatible) {
       geometry = meshObject.geometry;
@@ -211,7 +210,7 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
         normals[i * 3 + 2] = n.z;
       }
       normalAttr.needsUpdate = true;
-    } else if (geometry.getAttribute("normal")) {
+    } else if (geometry.hasAttribute("normal")) {
       geometry.deleteAttribute("normal");
     }
 
@@ -225,14 +224,14 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
         colors[i * 3 + 2] = SRGBToLinear(c.b);
       }
       colorAttr.needsUpdate = true;
-    } else if (geometry.getAttribute("color")) {
+    } else if (geometry.hasAttribute("color")) {
       geometry.deleteAttribute("color");
     }
 
     if (indexCount > 0) {
       const existingIndex = geometry.getIndex();
       let indexArray: Uint32Array;
-      if (existingIndex && existingIndex.array.length === indexCount) {
+      if (existingIndex?.array.length === indexCount) {
         indexArray = existingIndex.array as Uint32Array;
         indexArray.set(block.triangles);
         existingIndex.needsUpdate = true;
@@ -265,7 +264,7 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
     itemSize: number,
   ): THREE.BufferAttribute {
     const existing = geometry.getAttribute(name) as THREE.BufferAttribute | undefined;
-    if (existing && existing.array.length === count * itemSize) {
+    if (existing?.array.length === count * itemSize) {
       return existing;
     }
     const attr = new THREE.BufferAttribute(new Float32Array(count * itemSize), itemSize);

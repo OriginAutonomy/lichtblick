@@ -12,7 +12,7 @@ export const builtinMessageConverters: RegisterMessageConverterArgs<unknown>[] =
   {
     fromSchemaName: "point_cloud_interfaces/msg/CompressedPointCloud2",
     toSchemaName: "sensor_msgs/msg/PointCloud2",
-    converter: (inputMessage: unknown) => {
+    converter: (inputMessage: unknown): ReturnType<typeof convertCompressedPointCloud> => {
       return convertCompressedPointCloud(inputMessage as CompressedPointCloud);
     },
   },

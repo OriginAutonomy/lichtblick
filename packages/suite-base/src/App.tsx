@@ -42,8 +42,8 @@ import ExtensionCatalogProvider from "./providers/ExtensionCatalogProvider/Exten
 import ExtensionMarketplaceProvider from "./providers/ExtensionMarketplaceProvider";
 import PanelCatalogProvider from "./providers/PanelCatalogProvider";
 import { LaunchPreference } from "./screens/LaunchPreference";
-import { IExtensionLoader } from "./services/extension/IExtensionLoader";
 import { builtinMessageConverters } from "./services/cloudini/builtinMessageConverters";
+import { IExtensionLoader } from "./services/extension/IExtensionLoader";
 
 export type AppProps = CustomWindowControlsProps & {
   appConfiguration: IAppConfiguration;

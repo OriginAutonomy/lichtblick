@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -12,9 +12,9 @@ import { RosValue } from "@lichtblick/suite-base/players/types";
 import { VoxelBlockLayer } from "@lichtblick/suite-base/types/NvbloxMessages";
 
 import type { LayerSettingsNvblox } from "./NvbloxExtension";
-import { SRGBToLinear } from "../../color";
 import type { IRenderer } from "../../IRenderer";
 import { BaseUserData, Renderable } from "../../Renderable";
+import { SRGBToLinear } from "../../color";
 
 export type NvbloxVoxelUserData = BaseUserData & {
   topic: string;
