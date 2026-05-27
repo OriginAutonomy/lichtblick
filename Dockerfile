@@ -44,6 +44,8 @@ RUN mkdir -p /lichtblick \
 # The webpack template wraps the placeholder as [/*PLACEHOLDER*/][0], so empty/missing
 # substitution gracefully evaluates to undefined — no default JSON value required.
 RUN printf '#!/bin/bash\n\
+set -e\n\
+shopt -u patsub_replacement\n\
 cd /app\n\
 index_html=$(cat index.html)\n\
 replace_pattern='"'"'/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/'"'"'\n\
