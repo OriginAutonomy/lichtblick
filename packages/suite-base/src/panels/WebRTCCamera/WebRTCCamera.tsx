@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +15,7 @@ type Props = {
 
 export function WebRTCCamera({ config }: Props): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  console.log("WebRTCCamera config:", config)
+  void config;
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
   const [status, setStatus] = useState<string>("Idle");
@@ -66,7 +66,9 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
       const checkState = () => {
         if (pc.iceGatheringState === "complete") {
           pc.removeEventListener("icegatheringstatechange", checkState);
-          if (bufferTimeout) clearTimeout(bufferTimeout);
+          if (bufferTimeout) {
+            clearTimeout(bufferTimeout);
+          }
           clearTimeout(hardTimeout);
           safeResolve();
         }
@@ -101,17 +103,17 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
         throw new Error(`Server error: ${response.statusText}`);
       }
 
-      const answer = await response.json();
+      const answer = (await response.json()) as RTCSessionDescriptionInit;
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
       setStatus("Connected! Waiting for video...");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Signaling failed:", error);
       setStatus(`Connection Failed: ${String(error)}`);
     }
   };
 
   const handleReconnect = () => {
-    void startWebRTC(serverUrl).catch((error) => {
+    void startWebRTC(serverUrl).catch((error: unknown) => {
       console.error("WebRTC connection failed:", error);
       setStatus(`Error: ${String(error)}`);
     });
@@ -131,7 +133,7 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
   useInterval(() => {
     const pc = pcRef.current;
 
-    if (pc && pc.connectionState === "connected") {
+    if (pc?.connectionState === "connected") {
       void pc.getStats().then((stats) => {
         stats.forEach((report) => {
           if (report.type === "inbound-rtp" && report.kind === "video") {
@@ -140,8 +142,8 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
             }
           }
 
-          if (report.type === "candidate-pair" && report.state === "succeeded") {
-            const rttSeconds = report.currentRoundTripTime || report.roundTripTime;
+          if (report.type === "candidate-pair" && String(report.state) === "succeeded") {
+            const rttSeconds: unknown = report.currentRoundTripTime ?? report.roundTripTime;
             if (typeof rttSeconds === "number") {
               const rttMs = parseFloat((rttSeconds * 1000).toFixed(1));
               setLatency(rttMs);
@@ -161,7 +163,7 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
         <input
           type="text"
           value={serverUrl}
-          onChange={(e) => setServerUrl(e.target.value)}
+          onChange={(e) => { setServerUrl(e.target.value); }}
           placeholder="http://<ROBOT-IP>:8080/offer"
           style={{
             flex: 1,
@@ -199,7 +201,7 @@ export function WebRTCCamera({ config }: Props): React.JSX.Element {
         <span>
           Status: <b>{status}</b>
         </span>
-        {latency !== null && (
+        {latency != null && (
           <span>
             Latency: <b>{latency} ms</b>
           </span>

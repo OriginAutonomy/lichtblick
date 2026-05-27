@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,6 +14,7 @@ import { VoxelBlockLayer } from "@lichtblick/suite-base/types/NvbloxMessages";
 import type { LayerSettingsNvblox } from "./NvbloxExtension";
 import type { IRenderer } from "../../IRenderer";
 import { BaseUserData, Renderable } from "../../Renderable";
+import { SRGBToLinear } from "../../color";
 
 export type NvbloxVoxelUserData = BaseUserData & {
   topic: string;
@@ -25,6 +26,8 @@ export type NvbloxVoxelUserData = BaseUserData & {
 export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
   #blockGroup: THREE.Group;
   #blockMarkers = new Map<string, THREE.InstancedMesh>();
+  #cachedGeometry: THREE.BoxGeometry | undefined;
+  #cachedVoxelSize: number = 0;
 
   public constructor(
     topic: string,
@@ -98,7 +101,6 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
   #clearAllBlocks(): void {
     for (const marker of this.#blockMarkers.values()) {
       this.#blockGroup.remove(marker);
-      marker.geometry.dispose();
       if (Array.isArray(marker.material)) {
         marker.material.forEach((m) => {
           m.dispose();
@@ -132,7 +134,6 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
         const existingMarker = this.#blockMarkers.get(blockId);
         if (existingMarker) {
           this.#blockGroup.remove(existingMarker);
-          existingMarker.geometry.dispose();
           if (Array.isArray(existingMarker.material)) {
             existingMarker.material.forEach((m) => {
               m.dispose();
@@ -156,11 +157,9 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
     _idx: { x: number; y: number; z: number },
     voxelSize: number,
   ): void {
-    // Remove existing marker if it exists
     const existingMarker = this.#blockMarkers.get(blockId);
     if (existingMarker) {
       this.#blockGroup.remove(existingMarker);
-      existingMarker.geometry.dispose();
       if (Array.isArray(existingMarker.material)) {
         existingMarker.material.forEach((m) => {
           m.dispose();
@@ -176,15 +175,20 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
       return;
     }
 
-    // Create instanced mesh for voxels
-    const geometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
+    const hasColors = block.colors.length > 0 && block.colors.length === block.centers.length;
+
+    if (this.#cachedVoxelSize !== voxelSize || !this.#cachedGeometry) {
+      this.#cachedGeometry?.dispose();
+      this.#cachedGeometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
+      this.#cachedVoxelSize = voxelSize;
+    }
+
     const material = new THREE.MeshPhongMaterial({
-      vertexColors: true,
-      emissive: 0x222222,
+      emissive: hasColors ? 0x222222 : 0x888888,
       shininess: 30,
     });
 
-    const instancedMesh = new THREE.InstancedMesh(geometry, material, voxelCount);
+    const instancedMesh = new THREE.InstancedMesh(this.#cachedGeometry, material, voxelCount);
     instancedMesh.name = `nvblox-voxel-block-${blockId}`;
 
     // Set up matrices and colors for each voxel
@@ -193,16 +197,17 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
 
     for (let i = 0; i < voxelCount; i++) {
       const center = block.centers[i];
-      const voxelColor = block.colors[i];
+      const voxelColor = hasColors ? block.colors[i] : undefined;
 
-      if (center && voxelColor) {
+      if (center) {
         // Set position
         matrix.makeTranslation(center.x, center.y, center.z);
         instancedMesh.setMatrixAt(i, matrix);
 
-        // Set color
-        color.setRGB(voxelColor.r, voxelColor.g, voxelColor.b);
-        instancedMesh.setColorAt(i, color);
+        if (voxelColor) {
+          color.setRGB(SRGBToLinear(voxelColor.r), SRGBToLinear(voxelColor.g), SRGBToLinear(voxelColor.b));
+          instancedMesh.setColorAt(i, color);
+        }
       }
     }
 
@@ -218,6 +223,8 @@ export class RenderableNvbloxVoxel extends Renderable<NvbloxVoxelUserData> {
 
   public override dispose(): void {
     this.#clearAllBlocks();
+    this.#cachedGeometry?.dispose();
+    this.#cachedGeometry = undefined;
     super.dispose();
   }
 }

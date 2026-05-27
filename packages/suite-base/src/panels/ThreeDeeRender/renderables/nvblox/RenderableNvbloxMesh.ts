@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,6 +14,7 @@ import { Mesh } from "@lichtblick/suite-base/types/NvbloxMessages";
 import type { LayerSettingsNvblox } from "./NvbloxExtension";
 import type { IRenderer } from "../../IRenderer";
 import { BaseUserData, Renderable } from "../../Renderable";
+import { SRGBToLinear } from "../../color";
 
 export type NvbloxMeshUserData = BaseUserData & {
   topic: string;
@@ -154,98 +155,121 @@ export class RenderableNvbloxMesh extends Renderable<NvbloxMeshUserData> {
     _idx: { x: number; y: number; z: number },
     _blockSize: number,
   ): void {
-    // Remove existing marker if it exists
-    const existingMarker = this.#blockMarkers.get(blockId);
-    if (existingMarker) {
-      this.#blockGroup.remove(existingMarker);
-      existingMarker.geometry.dispose();
-      if (Array.isArray(existingMarker.material)) {
-        existingMarker.material.forEach((m) => {
-          m.dispose();
-        });
-      } else {
-        existingMarker.material.dispose();
+    const vertexCount = block.vertices.length;
+    const hasVertexColors = block.colors.length > 0 && block.colors.length === vertexCount;
+    const hasNormals = block.normals.length === vertexCount;
+    const indexCount = block.triangles.length;
+
+    let meshObject = this.#blockMarkers.get(blockId);
+    let geometry: THREE.BufferGeometry;
+    let material: THREE.MeshPhongMaterial;
+
+    const existingMaterial = meshObject?.material as THREE.MeshPhongMaterial | undefined;
+    const materialCompatible = existingMaterial?.vertexColors === hasVertexColors;
+
+    if (meshObject && materialCompatible) {
+      geometry = meshObject.geometry;
+      material = existingMaterial!;
+    } else {
+      if (meshObject) {
+        this.#blockGroup.remove(meshObject);
+        meshObject.geometry.dispose();
+        (meshObject.material as THREE.Material).dispose();
       }
-      this.#blockMarkers.delete(blockId);
+      geometry = new THREE.BufferGeometry();
+      material = new THREE.MeshPhongMaterial({
+        vertexColors: hasVertexColors,
+        side: THREE.DoubleSide,
+        flatShading: false,
+        emissive: hasVertexColors ? 0x222222 : 0x888888,
+        shininess: 30,
+      });
+      meshObject = new THREE.Mesh(geometry, material);
+      meshObject.name = `nvblox-mesh-block-${blockId}`;
+      this.#blockGroup.add(meshObject);
+      this.#blockMarkers.set(blockId, meshObject);
     }
 
-    // Create geometry
-    const geometry = new THREE.BufferGeometry();
-
-    // Set vertices
-    const vertices = new Float32Array(block.vertices.length * 3);
-    for (let i = 0; i < block.vertices.length; i++) {
+    const positionAttr = this.#ensureFloat32Attribute(geometry, "position", vertexCount, 3);
+    const positions = positionAttr.array as Float32Array;
+    for (let i = 0; i < vertexCount; i++) {
       const v = block.vertices[i]!;
-      vertices[i * 3] = v.x;
-      vertices[i * 3 + 1] = v.y;
-      vertices[i * 3 + 2] = v.z;
+      positions[i * 3] = v.x;
+      positions[i * 3 + 1] = v.y;
+      positions[i * 3 + 2] = v.z;
     }
-    const positionAttr = new THREE.BufferAttribute(vertices, 3);
     positionAttr.needsUpdate = true;
-    geometry.setAttribute("position", positionAttr);
 
-    // Set normals if available
-    if (block.normals.length === block.vertices.length) {
-      const normals = new Float32Array(block.normals.length * 3);
-      for (let i = 0; i < block.normals.length; i++) {
+    if (hasNormals) {
+      const normalAttr = this.#ensureFloat32Attribute(geometry, "normal", vertexCount, 3);
+      const normals = normalAttr.array as Float32Array;
+      for (let i = 0; i < vertexCount; i++) {
         const n = block.normals[i]!;
         normals[i * 3] = n.x;
         normals[i * 3 + 1] = n.y;
         normals[i * 3 + 2] = n.z;
       }
-      const normalAttr = new THREE.BufferAttribute(normals, 3);
       normalAttr.needsUpdate = true;
-      geometry.setAttribute("normal", normalAttr);
+    } else if (geometry.hasAttribute("normal")) {
+      geometry.deleteAttribute("normal");
     }
 
-    // Set colors if available
-    if (block.colors.length === block.vertices.length) {
-      const colors = new Float32Array(block.colors.length * 3);
-      for (let i = 0; i < block.colors.length; i++) {
+    if (hasVertexColors) {
+      const colorAttr = this.#ensureFloat32Attribute(geometry, "color", vertexCount, 3);
+      const colors = colorAttr.array as Float32Array;
+      for (let i = 0; i < vertexCount; i++) {
         const c = block.colors[i]!;
-        colors[i * 3] = c.r;
-        colors[i * 3 + 1] = c.g;
-        colors[i * 3 + 2] = c.b;
+        colors[i * 3] = SRGBToLinear(c.r);
+        colors[i * 3 + 1] = SRGBToLinear(c.g);
+        colors[i * 3 + 2] = SRGBToLinear(c.b);
       }
-      const colorAttr = new THREE.BufferAttribute(colors, 3);
       colorAttr.needsUpdate = true;
-      geometry.setAttribute("color", colorAttr);
+    } else if (geometry.hasAttribute("color")) {
+      geometry.deleteAttribute("color");
     }
 
-    // Set indices
-    if (block.triangles.length > 0) {
-      const indices = new Uint32Array(block.triangles);
-      const indexAttr = new THREE.BufferAttribute(indices, 1);
-      indexAttr.needsUpdate = true;
-      geometry.setIndex(indexAttr);
+    if (indexCount > 0) {
+      const existingIndex = geometry.getIndex();
+      let indexArray: Uint32Array;
+      if (existingIndex?.array.length === indexCount) {
+        indexArray = existingIndex.array as Uint32Array;
+        indexArray.set(block.triangles);
+        existingIndex.needsUpdate = true;
+      } else {
+        indexArray = new Uint32Array(block.triangles);
+        geometry.setIndex(new THREE.BufferAttribute(indexArray, 1));
+      }
+    } else if (geometry.getIndex()) {
+      geometry.setIndex(null);
     }
 
-    if (block.normals.length === 0) {
+    if (indexCount > 0) {
+      geometry.setDrawRange(0, indexCount);
+    } else {
+      geometry.setDrawRange(0, vertexCount);
+    }
+
+    if (!hasNormals) {
       geometry.computeVertexNormals();
     }
 
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();
+  }
 
-    const hasColors = block.colors.length > 0;
-    const material = new THREE.MeshPhongMaterial({
-      vertexColors: hasColors,
-      side: THREE.DoubleSide,
-      flatShading: false,
-      emissive: hasColors ? 0x222222 : 0x888888,
-      shininess: 30,
-    });
-    material.needsUpdate = true;
-
-    // Create mesh
-    const meshObject = new THREE.Mesh(geometry, material);
-    meshObject.name = `nvblox-mesh-block-${blockId}`;
-
-    // No need to position the mesh - vertices are already in the correct world coordinates
-    // The block origin is implicit in the vertex positions
-
-    this.#blockGroup.add(meshObject);
-    this.#blockMarkers.set(blockId, meshObject);
+  #ensureFloat32Attribute(
+    geometry: THREE.BufferGeometry,
+    name: string,
+    count: number,
+    itemSize: number,
+  ): THREE.BufferAttribute {
+    const existing = geometry.getAttribute(name) as THREE.BufferAttribute | undefined;
+    if (existing?.array.length === count * itemSize) {
+      return existing;
+    }
+    const attr = new THREE.BufferAttribute(new Float32Array(count * itemSize), itemSize);
+    geometry.setAttribute(name, attr);
+    return attr;
   }
 
   public override dispose(): void {

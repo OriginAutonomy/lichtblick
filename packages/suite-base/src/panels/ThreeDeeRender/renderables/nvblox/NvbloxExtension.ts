@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2023-2025 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
+// SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -16,8 +16,8 @@ import { SceneExtension, PartialMessageEvent } from "../../SceneExtension";
 import { SettingsTreeEntry } from "../../SettingsManager";
 import { BaseSettings } from "../../settings";
 import { topicIsConvertibleToSchema } from "../../topicIsConvertibleToSchema";
-import { MISSING_TRANSFORM, missingTransformMessage } from "../transforms";
 import { updatePose } from "../../updatePose";
+import { MISSING_TRANSFORM, missingTransformMessage } from "../transforms";
 
 export type LayerSettingsNvblox = BaseSettings & {
   showMesh: boolean;
@@ -60,6 +60,7 @@ export class NvbloxExtension extends SceneExtension<RenderableNvbloxMesh | Rende
   public static extensionId = "foxglove.Nvblox";
   #meshTopics = new Map<string, TopicNvbloxMesh>();
   #voxelTopics = new Map<string, TopicNvbloxVoxel>();
+  #loggedMissingTransform = new Set<string>();
 
   public constructor(renderer: IRenderer) {
     super("foxglove.Nvblox", renderer);
@@ -215,8 +216,41 @@ export class NvbloxExtension extends SceneExtension<RenderableNvbloxMesh | Rende
           MISSING_TRANSFORM,
           message,
         );
+
+        const logKey = `${renderable.userData.topic}|${frameId}|${renderFrameId}|${fixedFrameId}`;
+        if (!this.#loggedMissingTransform.has(logKey)) {
+          this.#loggedMissingTransform.add(logKey);
+          const tree = this.renderer.transformTree;
+          const srcFrame = tree.frame(frameId);
+          const renderFrame = tree.frame(renderFrameId);
+          const fixedFrame = tree.frame(fixedFrameId);
+          const allFrames = Array.from(tree.frames().keys());
+          console.debug(
+            `[Nvblox] Transform lookup failed for topic "${renderable.userData.topic}"`,
+            {
+              messageFrameId: frameId,
+              renderFrameId,
+              fixedFrameId,
+              srcFrameExists: srcFrame != undefined,
+              srcFrameTransformCount: srcFrame?.transformsSize(),
+              srcFrameParent: srcFrame?.parent()?.id,
+              renderFrameExists: renderFrame != undefined,
+              renderFrameTransformCount: renderFrame?.transformsSize(),
+              renderFrameParent: renderFrame?.parent()?.id,
+              fixedFrameExists: fixedFrame != undefined,
+              currentTime: currentTime.toString(),
+              srcTime: srcTime.toString(),
+              messageTime: renderable.userData.messageTime.toString(),
+              frameLocked,
+              allFrames,
+            },
+          );
+        }
       } else {
         this.renderer.settings.errors.remove(renderable.userData.settingsPath, MISSING_TRANSFORM);
+        this.#loggedMissingTransform.delete(
+          `${renderable.userData.topic}|${frameId}|${renderFrameId}|${fixedFrameId}`,
+        );
       }
     }
   }

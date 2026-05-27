@@ -31,7 +31,7 @@ export type Diagnostic = {
 };
 
 export type UserScriptLog = {
-  source: string;
+  source: "registerScript" | "processMessage";
   value: unknown;
 };
 
