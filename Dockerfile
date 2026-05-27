@@ -41,11 +41,17 @@ RUN mkdir -p /lichtblick \
 
 # Entrypoint script must be created as root (node user cannot write to /).
 # Uses bash because ${var/pattern/replacement} is a bash-only expansion (dash rejects it).
+# The webpack template wraps the placeholder as [/*PLACEHOLDER*/][0], so empty/missing
+# substitution gracefully evaluates to undefined — no default JSON value required.
 RUN printf '#!/bin/bash\n\
+cd /app\n\
 index_html=$(cat index.html)\n\
 replace_pattern='"'"'/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/'"'"'\n\
-replace_value=$(cat /lichtblick/default-layout.json)\n\
-echo "${index_html/"$replace_pattern"/"$replace_value"}" > index.html\n\
+replace_value=""\n\
+if [ -s /lichtblick/default-layout.json ]; then\n\
+  replace_value=$(cat /lichtblick/default-layout.json)\n\
+fi\n\
+printf '"'"'%s\\n'"'"' "${index_html/"$replace_pattern"/"$replace_value"}" > index.html\n\
 exec "$@"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
 
 USER node
