@@ -53,7 +53,7 @@ replace_value=""\n\
 if [ -s /lichtblick/default-layout.json ]; then\n\
   replace_value=$(cat /lichtblick/default-layout.json)\n\
 fi\n\
-printf '"'"'%s\\n'"'"' "${index_html/"$replace_pattern"/"$replace_value"}" > index.html\n\
+printf '"'"'%%s\\n'"'"' "${index_html/$replace_pattern/$replace_value}" > index.html\n\
 exec "$@"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
 
 USER node
