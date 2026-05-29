@@ -48,7 +48,7 @@ set -e\n\
 shopt -u patsub_replacement\n\
 cd /app\n\
 index_html=$(cat index.html)\n\
-replace_pattern='"'"'/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/'"'"'\n\
+replace_pattern='"'"'/[*]LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER[*]/'"'"'\n\
 replace_value=""\n\
 if [ -s /lichtblick/default-layout.json ]; then\n\
   replace_value=$(cat /lichtblick/default-layout.json)\n\
