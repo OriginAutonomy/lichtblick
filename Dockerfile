@@ -34,17 +34,30 @@ RUN --mount=type=cache,target=/root/.npm \
 WORKDIR /app
 COPY --from=build --chown=node:node /src/web/.webpack ./
 
+# Pre-create the layout dir so the entrypoint can write to it as the node user at runtime
+RUN mkdir -p /lichtblick \
+    && touch /lichtblick/default-layout.json \
+    && chown -R node:node /lichtblick
+
+# Entrypoint script must be created as root (node user cannot write to /).
+# Uses bash because ${var/pattern/replacement} is a bash-only expansion (dash rejects it).
+# The webpack template wraps the placeholder as [/*PLACEHOLDER*/][0], so empty/missing
+# substitution gracefully evaluates to undefined — no default JSON value required.
+RUN printf '#!/bin/bash\n\
+set -e\n\
+shopt -u patsub_replacement\n\
+cd /app\n\
+index_html=$(cat index.html)\n\
+replace_pattern='"'"'/[*]LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER[*]/'"'"'\n\
+replace_value=""\n\
+if [ -s /lichtblick/default-layout.json ]; then\n\
+  replace_value=$(cat /lichtblick/default-layout.json)\n\
+fi\n\
+printf '"'"'%%s\\n'"'"' "${index_html/$replace_pattern/$replace_value}" > index.html\n\
+exec "$@"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
+
 USER node
 EXPOSE 8017
 
-RUN printf '#!/bin/sh\n\
-mkdir -p /lichtblick\n\
-touch /lichtblick/default-layout.json\n\
-index_html=$(cat index.html)\n\
-replace_pattern='"'"'/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/'"'"'\n\
-replace_value=$(cat /lichtblick/default-layout.json)\n\
-echo "${index_html/"$replace_pattern"/"$replace_value"}" > index.html\n\
-exec "$@"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
-CMD ["caddy", "file-server", "--listen", ":8017"]
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]
+CMD ["serve", "-s", ".", "-l", "8017"]
